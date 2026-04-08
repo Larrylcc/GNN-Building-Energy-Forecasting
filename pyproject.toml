@@ -9,9 +9,11 @@ dependencies = [
     "matplotlib>=3.10.8",
     "numpy<2.0",
     "pandas>=2.3.3",
+    "pyarrow>=18.0.0",
     "scikit-learn>=1.7.2",
     "torch==2.2.2",
     "torch-geometric>=2.7.0",
     "torchaudio==2.2.2",
     "torchvision==0.17.2",
+    "xgboost>=3.0.0",
 ]

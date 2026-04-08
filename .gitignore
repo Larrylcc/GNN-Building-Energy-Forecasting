@@ -2,6 +2,7 @@ test.py
 data/
 paper/
 .DS_Store
+*_submission.csv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

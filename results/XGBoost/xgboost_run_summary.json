@@ -1,0 +1,43 @@
+{
+  "xgboost_version": "3.2.0",
+  "gpu_device_ordinal": 0,
+  "data_root": "F:\\Desktop\\Final\\USTB-graduation-project\\ASHRAE-Great Energy Predictor III\\ashrae-energy-prediction",
+  "output_dir": "F:\\Desktop\\Final\\workspace\\XGBoost\\origin_true_xgboost_baseline_outputs",
+  "feature_count": 21,
+  "categorical_features": [
+    "site_id",
+    "building_id",
+    "primary_use",
+    "meter",
+    "wind_direction",
+    "beaufort_scale",
+    "month_datetime",
+    "weekofyear_datetime",
+    "hour_datetime",
+    "day_week",
+    "day_month_datetime",
+    "week_month_datetime"
+  ],
+  "numerical_features": [
+    "square_feet",
+    "year_built",
+    "age",
+    "air_temperature",
+    "cloud_coverage",
+    "dew_temperature",
+    "precip_depth_1_hr",
+    "floor_count",
+    "dayofyear_datetime"
+  ],
+  "fold_scores": [
+    0.5241398156399064,
+    0.5250996347524535,
+    0.5247065121158068,
+    0.5226603760150165,
+    0.5242159449677101
+  ],
+  "overall_rmse_log1p": 0.5241651175020712,
+  "metrics_path": "F:\\Desktop\\Final\\workspace\\XGBoost\\origin_true_xgboost_baseline_outputs\\xgboost_cv_metrics.csv",
+  "importance_path": "F:\\Desktop\\Final\\workspace\\XGBoost\\origin_true_xgboost_baseline_outputs\\xgboost_feature_importance.csv",
+  "submission_path": "F:\\Desktop\\Final\\workspace\\XGBoost\\origin_true_xgboost_baseline_outputs\\xgboost_submission.csv"
+}
