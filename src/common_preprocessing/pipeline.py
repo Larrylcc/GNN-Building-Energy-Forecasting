@@ -27,11 +27,30 @@ from common_preprocessing.loaders import load_raw_data
 from common_preprocessing.split import time_based_train_valid_split
 
 
+def _unique_in_order(columns: list[str]) -> list[str]:
+    seen: set[str] = set()
+    unique_columns: list[str] = []
+    for column in columns:
+        if column in seen:
+            continue
+        seen.add(column)
+        unique_columns.append(column)
+    return unique_columns
+
+
+def _assert_no_duplicate_columns(df: pd.DataFrame, split_name: str) -> None:
+    duplicated = df.columns[df.columns.duplicated()].tolist()
+    if duplicated:
+        raise ValueError(f"Duplicate columns found in {split_name}: {duplicated}")
+
+
 def _ensure_columns(df: pd.DataFrame, columns: list[str], split_name: str) -> pd.DataFrame:
     missing = [column for column in columns if column not in df.columns]
     if missing:
         raise ValueError(f"Missing required columns in {split_name}: {missing}")
-    return df[columns].copy()
+    output_df = df[columns].copy()
+    _assert_no_duplicate_columns(output_df, split_name=split_name)
+    return output_df
 
 
 def _save_dataframe(df: pd.DataFrame, base_name: str, output_dir: Path, output_formats: tuple[str, ...]) -> dict[str, str]:
@@ -81,8 +100,8 @@ def run_common_preprocessing_pipeline(config: CommonPreprocessingConfig) -> dict
         timestamp_column=TIMESTAMP_COLUMN,
     )
 
-    train_columns = [*ID_COLUMNS, *FEATURE_COLUMNS, TARGET_COLUMN, LOG_TARGET_COLUMN]
-    test_columns = [*TEST_ID_COLUMNS, *FEATURE_COLUMNS]
+    train_columns = _unique_in_order([*ID_COLUMNS, *FEATURE_COLUMNS, TARGET_COLUMN, LOG_TARGET_COLUMN])
+    test_columns = _unique_in_order([*TEST_ID_COLUMNS, *FEATURE_COLUMNS])
 
     common_train_df = _ensure_columns(split_train_df, train_columns, split_name="common_train")
     common_valid_df = _ensure_columns(split_valid_df, train_columns, split_name="common_valid")

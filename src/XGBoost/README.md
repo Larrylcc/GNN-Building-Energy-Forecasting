@@ -107,21 +107,21 @@ GPU 开关：
 先生成公共数据：
 
 ```bash
-python src/common_preprocessing/run_common_preprocessing.py \
-  --data-root data \
-  --output-dir data/processed/common \
-  --valid-ratio 0.2 \
+python src/common_preprocessing/run_common_preprocessing.py `
+  --data-root data `
+  --output-dir data/processed/common `
+  --valid-ratio 0.2 `
   --output-formats csv parquet
 ```
 
 再运行 XGBoost：
 
 ```bash
-python src/XGBoost/run_xgboost.py \
-  --common-data-dir data/processed/common \
-  --output-dir results/XGBoost \
-  --objective reg:squarederror \
-  --eval-metric rmse \
+python src/XGBoost/run_xgboost.py `
+  --common-data-dir data/processed/common `
+  --output-dir results/XGBoost `
+  --objective reg:squarederror `
+  --eval-metric rmse `
   --use-gpu
 ```
 

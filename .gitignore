@@ -2,7 +2,9 @@ test.py
 data/
 paper/
 .DS_Store
-*_submission.csv
+results/
+#*_submission.csv
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -211,3 +213,6 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+results/XGBoost/xgboost_feature_importance.csv
+results/XGBoost/xgboost_feature_importance.csv
+results/XGBoost/xgboost_feature_importance.csv
