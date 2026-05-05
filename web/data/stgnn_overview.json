@@ -1,0 +1,251 @@
+{
+  "generated_at": "2026-04-27T12:05:00",
+  "headline_stats": {
+    "node_count": 1398,
+    "feature_count": 35,
+    "window_size": 168,
+    "best_epoch": 7,
+    "test_rmse": 0.07465238955291846
+  },
+  "source_artifacts": [
+    "stgnn_run_summary.json",
+    "stgnn_model_params.json",
+    "stgnn_training_history.csv",
+    "stgnn_time_series_split.csv",
+    "stgnn_topk_edges.csv"
+  ],
+  "runtime_policy": "FastAPI 运行时只读取 web/data/stgnn_overview.json，不读取大 CSV，不加载 stgnn_final_model.pt 或 learned_adjacency.npy。",
+  "data_input": {
+    "target_scale": "log1p + train min-max 后的 meter_reading",
+    "tensor_expression": "X[t-168:t, node, feature] -> y[t, node]",
+    "feature_expression": "input_feature_cols = [meter_reading] + train_df.columns - {timestamp, meter_reading}",
+    "dense_note": "STGNN 将建筑编号映射为图节点，把每个时间戳组织成 node_count x feature_count 的稠密节点特征矩阵；缺失节点位置用前向填充的历史特征承接。",
+    "split_files": [
+      {
+        "split": "train",
+        "filename": "log1p_minmax_train.csv",
+        "raw_row_count": 9534062,
+        "included_row_count": 9534062,
+        "timestamp_count": 7027,
+        "window_count": 6859
+      },
+      {
+        "split": "valid",
+        "filename": "log1p_minmax_valid.csv",
+        "raw_row_count": 1208473,
+        "included_row_count": 1208473,
+        "timestamp_count": 879,
+        "window_count": 1208473
+      },
+      {
+        "split": "test",
+        "filename": "log1p_minmax_test.csv",
+        "raw_row_count": 1196500,
+        "included_row_count": 1196021,
+        "timestamp_count": 878,
+        "window_count": 1196021
+      }
+    ],
+    "time_splits": [
+      {
+        "split": "train",
+        "start_timestamp": "2016-01-01 00:00:00",
+        "end_timestamp": "2016-10-19 18:00:00",
+        "row_count": 9534062
+      },
+      {
+        "split": "valid",
+        "start_timestamp": "2016-10-19 19:00:00",
+        "end_timestamp": "2016-11-25 09:00:00",
+        "row_count": 1208473
+      },
+      {
+        "split": "test",
+        "start_timestamp": "2016-11-25 10:00:00",
+        "end_timestamp": "2016-12-31 23:00:00",
+        "row_count": 1196500
+      }
+    ],
+    "feature_groups": [
+      {
+        "name": "历史目标反馈",
+        "description": "上一段时间窗内的 meter_reading 作为节点序列输入，用于支持滚动预测。",
+        "count": 1,
+        "features": [
+          {"feature": "meter_reading", "name_zh": "变换后历史读数", "label": "meter_reading（历史读数）"}
+        ]
+      },
+      {
+        "name": "分类特征",
+        "description": "站点、建筑、用途、仪表、风向和时间离散特征。",
+        "count": 12,
+        "features": [
+          {"feature": "site_id", "name_zh": "站点编号", "label": "site_id（站点编号）"},
+          {"feature": "building_id", "name_zh": "建筑编号", "label": "building_id（建筑编号）"},
+          {"feature": "primary_use", "name_zh": "建筑主要用途", "label": "primary_use（建筑主要用途）"},
+          {"feature": "meter", "name_zh": "仪表类型", "label": "meter（仪表类型）"},
+          {"feature": "wind_direction", "name_zh": "风向编码", "label": "wind_direction（风向编码）"},
+          {"feature": "beaufort_scale", "name_zh": "蒲福风级", "label": "beaufort_scale（蒲福风级）"},
+          {"feature": "month_datetime", "name_zh": "月份", "label": "month_datetime（月份）"},
+          {"feature": "weekofyear_datetime", "name_zh": "年内周序号", "label": "weekofyear_datetime（年内周序号）"},
+          {"feature": "hour_datetime", "name_zh": "小时", "label": "hour_datetime（小时）"},
+          {"feature": "day_week", "name_zh": "星期", "label": "day_week（星期）"},
+          {"feature": "day_month_datetime", "name_zh": "月内日期", "label": "day_month_datetime（月内日期）"},
+          {"feature": "week_month_datetime", "name_zh": "月内周序号", "label": "week_month_datetime（月内周序号）"}
+        ]
+      },
+      {
+        "name": "数值特征",
+        "description": "建筑面积、年份、天气观测和年内日序号等连续变量。",
+        "count": 9,
+        "features": [
+          {"feature": "square_feet", "name_zh": "建筑面积", "label": "square_feet（建筑面积）"},
+          {"feature": "year_built", "name_zh": "建造年份", "label": "year_built（建造年份）"},
+          {"feature": "age", "name_zh": "建筑年龄", "label": "age（建筑年龄）"},
+          {"feature": "air_temperature", "name_zh": "空气温度", "label": "air_temperature（空气温度）"},
+          {"feature": "cloud_coverage", "name_zh": "云量覆盖", "label": "cloud_coverage（云量覆盖）"},
+          {"feature": "dew_temperature", "name_zh": "露点温度", "label": "dew_temperature（露点温度）"},
+          {"feature": "precip_depth_1_hr", "name_zh": "1小时降水深度", "label": "precip_depth_1_hr（1小时降水深度）"},
+          {"feature": "floor_count", "name_zh": "楼层数", "label": "floor_count（楼层数）"},
+          {"feature": "dayofyear_datetime", "name_zh": "年内日序号", "label": "dayofyear_datetime（年内日序号）"}
+        ]
+      },
+      {
+        "name": "缺失指示与其他天气",
+        "description": "缺失二值标记，以及海平面气压、风速等其他天气字段。",
+        "count": 13,
+        "features": [
+          {"feature": "sea_level_pressure", "name_zh": "海平面气压", "label": "sea_level_pressure（海平面气压）"},
+          {"feature": "wind_speed", "name_zh": "风速", "label": "wind_speed（风速）"},
+          {"feature": "age_missing", "name_zh": "建筑年龄缺失标记", "label": "age_missing（建筑年龄缺失标记）"},
+          {"feature": "air_temperature_missing", "name_zh": "空气温度缺失标记", "label": "air_temperature_missing（空气温度缺失标记）"},
+          {"feature": "beaufort_scale_missing", "name_zh": "蒲福风级缺失标记", "label": "beaufort_scale_missing（蒲福风级缺失标记）"},
+          {"feature": "cloud_coverage_missing", "name_zh": "云量覆盖缺失标记", "label": "cloud_coverage_missing（云量覆盖缺失标记）"},
+          {"feature": "dew_temperature_missing", "name_zh": "露点温度缺失标记", "label": "dew_temperature_missing（露点温度缺失标记）"},
+          {"feature": "floor_count_missing", "name_zh": "楼层数缺失标记", "label": "floor_count_missing（楼层数缺失标记）"},
+          {"feature": "precip_depth_1_hr_missing", "name_zh": "1小时降水深度缺失标记", "label": "precip_depth_1_hr_missing（1小时降水深度缺失标记）"},
+          {"feature": "sea_level_pressure_missing", "name_zh": "海平面气压缺失标记", "label": "sea_level_pressure_missing（海平面气压缺失标记）"},
+          {"feature": "wind_direction_missing", "name_zh": "风向编码缺失标记", "label": "wind_direction_missing（风向编码缺失标记）"},
+          {"feature": "wind_speed_missing", "name_zh": "风速缺失标记", "label": "wind_speed_missing（风速缺失标记）"},
+          {"feature": "year_built_missing", "name_zh": "建造年份缺失标记", "label": "year_built_missing（建造年份缺失标记）"}
+        ]
+      }
+    ]
+  },
+  "graph": {
+    "node_count": 1398,
+    "graph_top_k": 20,
+    "embed_dim": 16,
+    "adjacency_note": "GraphConstructor 用可学习节点嵌入计算 ReLU 相似度，每个节点保留 Top-K 外部邻居并加入自环，最后按行归一化。",
+    "test_only_node_ids": [403],
+    "test_unknown_node_row_count": 479,
+    "top_edges": [
+      {"source_building_id": 0, "target_building_id": 0, "weight": 0.068382, "is_self_loop": true, "width_percent": 100.0},
+      {"source_building_id": 0, "target_building_id": 74, "weight": 0.057415, "is_self_loop": false, "width_percent": 83.96},
+      {"source_building_id": 0, "target_building_id": 876, "weight": 0.056397, "is_self_loop": false, "width_percent": 82.48},
+      {"source_building_id": 0, "target_building_id": 54, "weight": 0.053829, "is_self_loop": false, "width_percent": 78.72},
+      {"source_building_id": 0, "target_building_id": 1, "weight": 0.050685, "is_self_loop": false, "width_percent": 74.12},
+      {"source_building_id": 0, "target_building_id": 103, "weight": 0.050525, "is_self_loop": false, "width_percent": 73.89},
+      {"source_building_id": 0, "target_building_id": 20, "weight": 0.049886, "is_self_loop": false, "width_percent": 72.95},
+      {"source_building_id": 0, "target_building_id": 759, "weight": 0.049054, "is_self_loop": false, "width_percent": 71.74}
+    ]
+  },
+  "model": {
+    "torch_version": "2.11.0+cu128",
+    "device": "cuda:0",
+    "algorithm": "learned graph GCN + GRU",
+    "prediction_scale": "y_scaled",
+    "prediction_note": "模型输出每个建筑节点下一小时的变换后 meter_reading，评估阶段会把预测值回填到后续全局节点窗口。",
+    "model_config": {
+      "input_size": 35,
+      "node_count": 1398,
+      "gcn_dim": 16,
+      "embed_dim": 16,
+      "graph_top_k": 20,
+      "gcn_layers": 4,
+      "hidden_size": 128,
+      "num_layers": 2,
+      "dropout": 0.1
+    },
+    "training_config": {
+      "window_size": 168,
+      "stride": 1,
+      "batch_size": 4,
+      "eval_batch_size": 1,
+      "epochs": 20,
+      "patience": 3,
+      "learning_rate": 0.001,
+      "weight_decay": 0.00001,
+      "grad_clip_norm": 1.0,
+      "seed": 42
+    },
+    "parameter_cards": [
+      {"name": "node_count", "value": 1398, "description": "图中的建筑节点数量。"},
+      {"name": "input_size", "value": 35, "description": "每个节点每小时输入的特征维度。"},
+      {"name": "window_size", "value": 168, "description": "每次用前 168 小时全局节点状态预测下一小时。"},
+      {"name": "graph_top_k", "value": 20, "description": "每个节点保留的外部相似邻居数量。"},
+      {"name": "embed_dim", "value": 16, "description": "可学习节点嵌入维度。"},
+      {"name": "gcn_dim", "value": 16, "description": "GCN 空间表示维度。"},
+      {"name": "gcn_layers", "value": 4, "description": "残差图卷积层数。"},
+      {"name": "hidden_size", "value": 128, "description": "GRU 隐状态维度。"},
+      {"name": "num_layers", "value": 2, "description": "堆叠 GRU 层数。"},
+      {"name": "batch_size", "value": 4, "description": "每批全局图序列窗口数量。"},
+      {"name": "learning_rate", "value": 0.001, "description": "AdamW 优化器学习率。"},
+      {"name": "patience", "value": 3, "description": "验证集 RMSE 连续未提升后的早停等待轮数。"}
+    ],
+    "flow_steps": [
+      "读取 log1p_minmax_train / valid / test，并用训练集建筑编号建立 1398 个图节点。",
+      "将每个时间戳展开为 node_count x 35 的节点特征矩阵，缺失节点用前向填充后的历史状态补齐。",
+      "用可学习节点嵌入构造 Top-K 邻接矩阵，加入自环并进行行归一化。",
+      "对每个时间步执行多层残差 GCN，聚合相似建筑节点的空间信息。",
+      "把每个节点 168 小时的 GCN 表示送入 GRU，线性层输出下一小时节点预测。",
+      "valid/test 采用 auto-rolling：预测的 meter_reading 会回填到后续全局窗口，再按观测 mask 计算指标。"
+    ]
+  },
+  "training": {
+    "best_epoch": 7,
+    "history": [
+      {"epoch": 1, "train_loss": 0.001343594889077412, "validation_rmse": 0.4825914147230203, "validation_r2": -6.990948029862939, "rmse_width_percent": 100.0},
+      {"epoch": 2, "train_loss": 0.0006252818221506683, "validation_rmse": 0.3345590178934949, "validation_r2": -2.8404720099631415, "rmse_width_percent": 69.33},
+      {"epoch": 3, "train_loss": 0.0005619574046142603, "validation_rmse": 0.14715905057314327, "validation_r2": 0.2569584879083907, "rmse_width_percent": 30.49},
+      {"epoch": 4, "train_loss": 0.0005397029582828153, "validation_rmse": 0.10781686954174118, "validation_r2": 0.6011472792003693, "rmse_width_percent": 22.34},
+      {"epoch": 5, "train_loss": 0.0005203149120255451, "validation_rmse": 0.13204059882155758, "validation_r2": 0.40178941473967256, "rmse_width_percent": 27.36},
+      {"epoch": 6, "train_loss": 0.0005051358783896162, "validation_rmse": 0.19330408577282318, "validation_r2": -0.2820979041500462, "rmse_width_percent": 40.06},
+      {"epoch": 7, "train_loss": 0.0004967694947337556, "validation_rmse": 0.09894186796610918, "validation_r2": 0.6641082525690378, "rmse_width_percent": 20.50},
+      {"epoch": 8, "train_loss": 0.00048735092198026026, "validation_rmse": 0.15152420689995513, "validation_r2": 0.21222324460913655, "rmse_width_percent": 31.40},
+      {"epoch": 9, "train_loss": 0.0004797363636843231, "validation_rmse": 0.144753221668769, "validation_r2": 0.28105511267549055, "rmse_width_percent": 29.99},
+      {"epoch": 10, "train_loss": 0.000458549705339256, "validation_rmse": 0.35354532986051346, "validation_r2": -3.2887361909859676, "rmse_width_percent": 73.26}
+    ],
+    "note": "训练记录保存到第 10 轮；最佳验证 RMSE 出现在第 7 轮，最终模型使用该轮参数。"
+  },
+  "metrics": {
+    "scale_note": "所有指标均在 log1p + train min-max 后的目标尺度上计算，不是原始 meter_reading 尺度。",
+    "validation": {
+      "mse": 0.009789493236622981,
+      "mae": 0.058964314120553994,
+      "rmse": 0.09894186796610918,
+      "r2": 0.6641082525690378,
+      "smape": 20.734997128607212,
+      "evaluated_row_count": 1208473,
+      "skipped_row_count": 0,
+      "evaluated_timestamp_count": 879,
+      "unknown_node_row_count": 0
+    },
+    "test": {
+      "mse": 0.00557297926596069,
+      "mae": 0.05024253691518081,
+      "rmse": 0.07465238955291846,
+      "r2": 0.8053747775926687,
+      "smape": 17.812271775213535,
+      "evaluated_row_count": 1196021,
+      "skipped_row_count": 479,
+      "evaluated_timestamp_count": 878,
+      "unknown_node_row_count": 479
+    }
+  },
+  "rolling_evaluation": {
+    "history_source": "valid 评估可使用 train 尾部全局历史，test 评估可使用 train + valid 尾部全局历史。",
+    "skip_rule": "若全局历史不足 168 小时或时间不连续，则当前时间戳观测行跳过；测试集中训练未见节点 403 的 479 行作为 unknown node 跳过。",
+    "feedback_rule": "每个时间戳预测完成后，将所有节点预测的 meter_reading 标准化值写回当前节点特征矩阵，用于后续小时预测。"
+  }
+}

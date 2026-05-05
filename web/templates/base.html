@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}ASHRAE 建筑能耗预测展示系统{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}">
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="header-inner">
+        <a class="brand" href="/dataset" aria-label="ASHRAE 建筑能耗预测展示系统">
+          <span class="brand-mark">A</span>
+          <span>
+            <strong>ASHRAE 建筑能耗预测</strong>
+            <small>FastAPI 展示系统</small>
+          </span>
+        </a>
+        <nav class="page-nav" aria-label="页面导航">
+          {% for page in pages %}
+          <a
+            class="nav-link{% if active_page == page.key %} active{% endif %}{% if not page.ready %} planned{% endif %}"
+            href="{{ page.url }}"
+          >
+            {{ page.label }}
+          </a>
+          {% endfor %}
+        </nav>
+      </div>
+    </header>
+
+    <main class="page-shell">
+      {% block content %}{% endblock %}
+    </main>
+
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

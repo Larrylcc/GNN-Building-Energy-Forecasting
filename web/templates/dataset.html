@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+
+{% block title %}数据集概况 - ASHRAE 建筑能耗预测{% endblock %}
+
+{% block content %}
+<section class="page-hero">
+  <div>
+    <p class="eyebrow">Dataset Overview</p>
+    <h1>ASHRAE Great Energy Predictor III 数据集概况</h1>
+    <p class="hero-copy">
+      本页展示原始数据文件组成、字段含义、基础规模、缺失值情况和少量样例数据。
+      页面数据已离线汇总到 <code>web/data/dataset_overview.json</code>，运行时不读取原始大 CSV。
+    </p>
+  </div>
+</section>
+
+<section class="stat-grid" aria-label="核心数据规模">
+  <article class="stat-card">
+    <span>训练集记录</span>
+    <strong>{{ "{:,}".format(dataset.headline_stats.train_rows) }}</strong>
+    <small>小时级 meter_reading 记录</small>
+  </article>
+  <article class="stat-card">
+    <span>建筑数量</span>
+    <strong>{{ "{:,}".format(dataset.headline_stats.buildings) }}</strong>
+    <small>building_metadata.csv</small>
+  </article>
+  <article class="stat-card">
+    <span>站点数量</span>
+    <strong>{{ dataset.headline_stats.sites }}</strong>
+    <small>用于关联天气数据</small>
+  </article>
+  <article class="stat-card">
+    <span>建筑用途类型</span>
+    <strong>{{ dataset.headline_stats.primary_uses }}</strong>
+    <small>primary_use 类别数</small>
+  </article>
+</section>
+
+<section class="content-band two-column">
+  <div>
+    <h2>数据任务背景</h2>
+    <p>
+      ASHRAE Great Energy Predictor III 关注建筑能耗预测。数据集提供建筑属性、天气条件与小时级能耗读数，
+      目标是基于历史观测数据预测不同建筑和仪表类型下的能耗表现。
+    </p>
+    <p>
+      当前毕业设计项目已先聚焦电表数据和 XGBoost baseline，后续页面会展示预处理、训练结果与解释性分析。
+    </p>
+  </div>
+  <div class="timeline-chip">
+    <span>训练时间范围</span>
+    <strong>{{ dataset.headline_stats.time_start }} 至 {{ dataset.headline_stats.time_end }}</strong>
+  </div>
+</section>
+
+<section class="content-band">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">Files</p>
+      <h2>原始文件组成</h2>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>文件</th>
+          <th>用途</th>
+          <th>行数</th>
+          <th>列数</th>
+          <th>大小 MB</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for file in dataset.files %}
+        <tr>
+          <td><code>{{ file.filename }}</code></td>
+          <td>{{ file.purpose }}</td>
+          <td>{{ "{:,}".format(file.row_count) }}</td>
+          <td>{{ file.column_count }}</td>
+          <td>{{ file.size_mb }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="content-band chart-grid">
+  <article>
+    <div class="section-heading compact">
+      <div>
+        <p class="eyebrow">Meter</p>
+        <h2>仪表类型分布</h2>
+      </div>
+    </div>
+    <div
+      class="bar-chart"
+      data-chart="meter"
+      data-values='{{ dataset.train.meter_distribution | tojson }}'
+      aria-label="仪表类型分布图"
+    ></div>
+  </article>
+  <article>
+    <div class="section-heading compact">
+      <div>
+        <p class="eyebrow">Primary Use</p>
+        <h2>建筑用途 Top 10</h2>
+      </div>
+    </div>
+    <div
+      class="bar-chart"
+      data-chart="primary-use"
+      data-values='{{ dataset.building_metadata.primary_use_distribution | tojson }}'
+      aria-label="建筑用途分布图"
+    ></div>
+  </article>
+</section>
+
+<section class="content-band">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">Fields</p>
+      <h2>主要字段说明</h2>
+    </div>
+  </div>
+  <div class="field-grid">
+    {% for group in dataset.field_groups %}
+    <article class="field-panel">
+      <h3>{{ group.name }}</h3>
+      <p>{{ group.description }}</p>
+      <dl>
+        {% for field in group.fields %}
+        <div>
+          <dt>{{ field.name }}</dt>
+          <dd>{{ field.type }} · {{ field.description }}</dd>
+        </div>
+        {% endfor %}
+      </dl>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="content-band chart-grid">
+  <article>
+    <div class="section-heading compact">
+      <div>
+        <p class="eyebrow">Missing</p>
+        <h2>天气数据缺失值</h2>
+      </div>
+    </div>
+    <div
+      class="bar-chart"
+      data-chart="weather-missing"
+      data-values='{{ dataset.weather_train.missing_summary | tojson }}'
+      aria-label="天气数据缺失值"
+    ></div>
+  </article>
+  <article>
+    <div class="section-heading compact">
+      <div>
+        <p class="eyebrow">Missing</p>
+        <h2>建筑元数据缺失值</h2>
+      </div>
+    </div>
+    <div
+      class="bar-chart"
+      data-chart="building-missing"
+      data-values='{{ dataset.building_metadata.missing_summary | tojson }}'
+      aria-label="建筑元数据缺失值"
+    ></div>
+  </article>
+</section>
+
+<section class="content-band">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">Samples</p>
+      <h2>少量示例数据</h2>
+    </div>
+  </div>
+  <div class="sample-tabs" role="tablist" aria-label="示例数据表切换">
+    <button class="tab-button active" type="button" data-sample-target="train">train.csv</button>
+    <button class="tab-button" type="button" data-sample-target="weather">weather_train.csv</button>
+    <button class="tab-button" type="button" data-sample-target="building">building_metadata.csv</button>
+  </div>
+
+  <div class="sample-panel active" id="sample-train">
+    {{ table_from_rows(dataset.train.sample_rows) }}
+  </div>
+  <div class="sample-panel" id="sample-weather">
+    {{ table_from_rows(dataset.weather_train.sample_rows) }}
+  </div>
+  <div class="sample-panel" id="sample-building">
+    {{ table_from_rows(dataset.building_metadata.sample_rows) }}
+  </div>
+</section>
+
+<section class="content-band note-band">
+  {% for note in dataset.notes %}
+  <p>{{ note }}</p>
+  {% endfor %}
+</section>
+{% endblock %}
+
+{% macro table_from_rows(rows) %}
+<div class="table-wrap sample-table">
+  <table>
+    <thead>
+      <tr>
+        {% for column in rows[0].keys() %}
+        <th>{{ column }}</th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        {% for value in row.values() %}
+        <td>{{ value if value is not none else "缺失" }}</td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endmacro %}
+
+{% block scripts %}
+<script src="{{ url_for('static', path='/js/dataset.js') }}"></script>
+{% endblock %}

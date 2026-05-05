@@ -1,0 +1,479 @@
+{
+  "generated_at": "2026-04-27T11:22:35",
+  "headline_stats": {
+    "feature_count": 34,
+    "train_rows": 9534062,
+    "best_iteration_round_count": 86,
+    "test_rmse": 0.08295355313704893
+  },
+  "source_artifacts": [
+    "xgboost_run_summary.json",
+    "xgboost_model_params.json",
+    "xgboost_time_series_split.csv",
+    "xgboost_feature_importance.csv"
+  ],
+  "runtime_policy": "FastAPI 运行时只读取 web/data/xgboost_overview.json，不读取大 CSV，也不加载 xgboost_final_model.json。",
+  "data_input": {
+    "target_scale": "log1p + train min-max 后的 meter_reading",
+    "excluded_columns": [
+      "timestamp",
+      "meter_reading"
+    ],
+    "feature_expression": "feature_cols = train_df.columns - {timestamp, meter_reading}",
+    "matrix_expression": "DMatrix(X, label=y)；X 为 34 个输入特征，y 为变换后的目标值。",
+    "split_files": [
+      {
+        "split": "train",
+        "filename": "log1p_minmax_train.csv",
+        "row_count": 9534062
+      },
+      {
+        "split": "valid",
+        "filename": "log1p_minmax_valid.csv",
+        "row_count": 1208473
+      },
+      {
+        "split": "test",
+        "filename": "log1p_minmax_test.csv",
+        "row_count": 1196500
+      }
+    ],
+    "time_splits": [
+      {
+        "split": "train",
+        "start_timestamp": "2016-01-01 00:00:00",
+        "end_timestamp": "2016-10-19 18:00:00",
+        "row_count": 9534062
+      },
+      {
+        "split": "valid",
+        "start_timestamp": "2016-10-19 19:00:00",
+        "end_timestamp": "2016-11-25 09:00:00",
+        "row_count": 1208473
+      },
+      {
+        "split": "test",
+        "start_timestamp": "2016-11-25 10:00:00",
+        "end_timestamp": "2016-12-31 23:00:00",
+        "row_count": 1196500
+      }
+    ],
+    "feature_groups": [
+      {
+        "name": "分类特征",
+        "description": "站点、建筑、用途、仪表、风向和时间离散特征。",
+        "count": 12,
+        "features": [
+          {
+            "feature": "site_id",
+            "name_zh": "站点编号",
+            "label": "site_id（站点编号）"
+          },
+          {
+            "feature": "building_id",
+            "name_zh": "建筑编号",
+            "label": "building_id（建筑编号）"
+          },
+          {
+            "feature": "primary_use",
+            "name_zh": "建筑主要用途",
+            "label": "primary_use（建筑主要用途）"
+          },
+          {
+            "feature": "meter",
+            "name_zh": "仪表类型",
+            "label": "meter（仪表类型）"
+          },
+          {
+            "feature": "wind_direction",
+            "name_zh": "风向编码",
+            "label": "wind_direction（风向编码）"
+          },
+          {
+            "feature": "beaufort_scale",
+            "name_zh": "蒲福风级",
+            "label": "beaufort_scale（蒲福风级）"
+          },
+          {
+            "feature": "month_datetime",
+            "name_zh": "月份",
+            "label": "month_datetime（月份）"
+          },
+          {
+            "feature": "weekofyear_datetime",
+            "name_zh": "年内周序号",
+            "label": "weekofyear_datetime（年内周序号）"
+          },
+          {
+            "feature": "hour_datetime",
+            "name_zh": "小时",
+            "label": "hour_datetime（小时）"
+          },
+          {
+            "feature": "day_week",
+            "name_zh": "星期",
+            "label": "day_week（星期）"
+          },
+          {
+            "feature": "day_month_datetime",
+            "name_zh": "月内日期",
+            "label": "day_month_datetime（月内日期）"
+          },
+          {
+            "feature": "week_month_datetime",
+            "name_zh": "月内周序号",
+            "label": "week_month_datetime（月内周序号）"
+          }
+        ]
+      },
+      {
+        "name": "数值特征",
+        "description": "建筑面积、年份、天气观测和年内日序号等连续变量。",
+        "count": 9,
+        "features": [
+          {
+            "feature": "square_feet",
+            "name_zh": "建筑面积",
+            "label": "square_feet（建筑面积）"
+          },
+          {
+            "feature": "year_built",
+            "name_zh": "建造年份",
+            "label": "year_built（建造年份）"
+          },
+          {
+            "feature": "age",
+            "name_zh": "建筑年龄",
+            "label": "age（建筑年龄）"
+          },
+          {
+            "feature": "air_temperature",
+            "name_zh": "空气温度",
+            "label": "air_temperature（空气温度）"
+          },
+          {
+            "feature": "cloud_coverage",
+            "name_zh": "云量覆盖",
+            "label": "cloud_coverage（云量覆盖）"
+          },
+          {
+            "feature": "dew_temperature",
+            "name_zh": "露点温度",
+            "label": "dew_temperature（露点温度）"
+          },
+          {
+            "feature": "precip_depth_1_hr",
+            "name_zh": "1小时降水深度",
+            "label": "precip_depth_1_hr（1小时降水深度）"
+          },
+          {
+            "feature": "floor_count",
+            "name_zh": "楼层数",
+            "label": "floor_count（楼层数）"
+          },
+          {
+            "feature": "dayofyear_datetime",
+            "name_zh": "年内日序号",
+            "label": "dayofyear_datetime（年内日序号）"
+          }
+        ]
+      },
+      {
+        "name": "缺失指示特征",
+        "description": "对应字段是否缺失的二值标记。",
+        "count": 11,
+        "features": [
+          {
+            "feature": "age_missing",
+            "name_zh": "建筑年龄缺失标记",
+            "label": "age_missing（建筑年龄缺失标记）"
+          },
+          {
+            "feature": "air_temperature_missing",
+            "name_zh": "空气温度缺失标记",
+            "label": "air_temperature_missing（空气温度缺失标记）"
+          },
+          {
+            "feature": "beaufort_scale_missing",
+            "name_zh": "蒲福风级缺失标记",
+            "label": "beaufort_scale_missing（蒲福风级缺失标记）"
+          },
+          {
+            "feature": "cloud_coverage_missing",
+            "name_zh": "云量覆盖缺失标记",
+            "label": "cloud_coverage_missing（云量覆盖缺失标记）"
+          },
+          {
+            "feature": "dew_temperature_missing",
+            "name_zh": "露点温度缺失标记",
+            "label": "dew_temperature_missing（露点温度缺失标记）"
+          },
+          {
+            "feature": "floor_count_missing",
+            "name_zh": "楼层数缺失标记",
+            "label": "floor_count_missing（楼层数缺失标记）"
+          },
+          {
+            "feature": "precip_depth_1_hr_missing",
+            "name_zh": "1小时降水深度缺失标记",
+            "label": "precip_depth_1_hr_missing（1小时降水深度缺失标记）"
+          },
+          {
+            "feature": "sea_level_pressure_missing",
+            "name_zh": "海平面气压缺失标记",
+            "label": "sea_level_pressure_missing（海平面气压缺失标记）"
+          },
+          {
+            "feature": "wind_direction_missing",
+            "name_zh": "风向编码缺失标记",
+            "label": "wind_direction_missing（风向编码缺失标记）"
+          },
+          {
+            "feature": "wind_speed_missing",
+            "name_zh": "风速缺失标记",
+            "label": "wind_speed_missing（风速缺失标记）"
+          },
+          {
+            "feature": "year_built_missing",
+            "name_zh": "建造年份缺失标记",
+            "label": "year_built_missing（建造年份缺失标记）"
+          }
+        ]
+      },
+      {
+        "name": "其他输入特征",
+        "description": "未归入前三组但实际进入模型的字段。",
+        "count": 2,
+        "features": [
+          {
+            "feature": "sea_level_pressure",
+            "name_zh": "海平面气压",
+            "label": "sea_level_pressure（海平面气压）"
+          },
+          {
+            "feature": "wind_speed",
+            "name_zh": "风速",
+            "label": "wind_speed（风速）"
+          }
+        ]
+      }
+    ]
+  },
+  "model": {
+    "xgboost_version": "3.2.0",
+    "algorithm": "hist tree boosting",
+    "matrix_type": "QuantileDMatrix",
+    "prediction_scale": "y_scaled",
+    "prediction_note": "模型输出为多棵回归树预测值的加和，目标尺度是 log1p + train min-max 后的 meter_reading。",
+    "training_rounds": {
+      "num_boost_round_upper_bound": 3000,
+      "early_stopping_rounds": 100,
+      "best_iteration_round_count": 86
+    },
+    "params": {
+      "objective": "reg:squarederror",
+      "eval_metric": "rmse",
+      "eta": 0.05,
+      "max_depth": 10,
+      "min_child_weight": 5,
+      "subsample": 0.8,
+      "colsample_bytree": 0.8,
+      "reg_alpha": 0.1,
+      "reg_lambda": 1.0,
+      "max_bin": 256,
+      "seed": 42,
+      "nthread": 0,
+      "verbosity": 1,
+      "tree_method": "hist",
+      "device": "cuda:0",
+      "sampling_method": "gradient_based"
+    },
+    "parameter_cards": [
+      {
+        "name": "objective",
+        "value": "reg:squarederror",
+        "description": "回归任务目标函数，最小化平方误差。"
+      },
+      {
+        "name": "eval_metric",
+        "value": "rmse",
+        "description": "训练和早停监控使用的评估指标。"
+      },
+      {
+        "name": "tree_method",
+        "value": "hist",
+        "description": "使用直方图近似加速分裂点搜索。"
+      },
+      {
+        "name": "device",
+        "value": "cuda:0",
+        "description": "训练脚本指定的计算设备。"
+      },
+      {
+        "name": "eta",
+        "value": 0.05,
+        "description": "学习率，控制每棵树对最终预测的贡献。"
+      },
+      {
+        "name": "max_depth",
+        "value": 10,
+        "description": "单棵树最大深度。"
+      },
+      {
+        "name": "subsample",
+        "value": 0.8,
+        "description": "每轮训练抽取的样本比例。"
+      },
+      {
+        "name": "colsample_bytree",
+        "value": 0.8,
+        "description": "每棵树抽取的特征比例。"
+      },
+      {
+        "name": "max_bin",
+        "value": 256,
+        "description": "直方图分箱数量。"
+      },
+      {
+        "name": "reg_alpha",
+        "value": 0.1,
+        "description": "L1 正则化系数。"
+      },
+      {
+        "name": "reg_lambda",
+        "value": 1.0,
+        "description": "L2 正则化系数。"
+      },
+      {
+        "name": "sampling_method",
+        "value": "gradient_based",
+        "description": "样本采样方法。"
+      }
+    ],
+    "flow_steps": [
+      "读取 log1p_minmax_train / valid / test 小时级切分文件。",
+      "移除 timestamp 与 meter_reading，得到 34 维特征矩阵 X。",
+      "将 X 和变换后的目标 y 组织为 QuantileDMatrix。",
+      "每轮新增一棵回归树，按梯度方向修正上一轮误差。",
+      "多棵树输出求和得到 y_scaled 预测值。",
+      "在 valid/test 上用同一目标尺度计算 MSE、MAE、RMSE、R2、SMAPE。"
+    ]
+  },
+  "metrics": {
+    "scale_note": "所有指标均在 log1p + train min-max 后的目标尺度上计算，不是原始 meter_reading 尺度。",
+    "validation": {
+      "mse": 0.006687838118523359,
+      "mae": 0.05405402556061745,
+      "rmse": 0.08177920345982442,
+      "r2": 0.7705305814743042,
+      "smape": 15.976771354675293
+    },
+    "test": {
+      "mse": 0.006881291978061199,
+      "mae": 0.05396578460931778,
+      "rmse": 0.08295355313704893,
+      "r2": 0.7595906257629395,
+      "smape": 16.00455093383789
+    },
+    "formulas": [
+      {
+        "name": "MSE",
+        "description": "预测值与真实值误差平方的平均值。"
+      },
+      {
+        "name": "RMSE",
+        "description": "MSE 开平方，与目标值处于同一尺度。"
+      },
+      {
+        "name": "MAE",
+        "description": "预测值与真实值绝对误差的平均值。"
+      },
+      {
+        "name": "R2",
+        "description": "模型相对均值基线解释目标方差的比例。"
+      },
+      {
+        "name": "SMAPE",
+        "description": "对称平均绝对百分比误差，训练脚本中乘以 100 输出百分数。"
+      }
+    ]
+  },
+  "feature_importance": {
+    "importance_type": "gain",
+    "top_features": [
+      {
+        "feature": "age_missing",
+        "label": "age_missing（建筑年龄缺失标记）",
+        "importance": 94.35154724121094,
+        "width_percent": 100.0
+      },
+      {
+        "feature": "site_id",
+        "label": "site_id（站点编号）",
+        "importance": 87.88050079345703,
+        "width_percent": 93.14
+      },
+      {
+        "feature": "square_feet",
+        "label": "square_feet（建筑面积）",
+        "importance": 84.0381088256836,
+        "width_percent": 89.07
+      },
+      {
+        "feature": "floor_count",
+        "label": "floor_count（楼层数）",
+        "importance": 48.66288757324219,
+        "width_percent": 51.58
+      },
+      {
+        "feature": "floor_count_missing",
+        "label": "floor_count_missing（楼层数缺失标记）",
+        "importance": 40.88986587524414,
+        "width_percent": 43.34
+      },
+      {
+        "feature": "building_id",
+        "label": "building_id（建筑编号）",
+        "importance": 19.518049240112305,
+        "width_percent": 20.69
+      },
+      {
+        "feature": "dayofyear_datetime",
+        "label": "dayofyear_datetime（年内日序号）",
+        "importance": 17.546031951904297,
+        "width_percent": 18.6
+      },
+      {
+        "feature": "age",
+        "label": "age（建筑年龄）",
+        "importance": 16.847640991210938,
+        "width_percent": 17.86
+      },
+      {
+        "feature": "primary_use",
+        "label": "primary_use（建筑主要用途）",
+        "importance": 16.844255447387695,
+        "width_percent": 17.85
+      },
+      {
+        "feature": "month_datetime",
+        "label": "month_datetime（月份）",
+        "importance": 15.130532264709473,
+        "width_percent": 16.04
+      },
+      {
+        "feature": "weekofyear_datetime",
+        "label": "weekofyear_datetime（年内周序号）",
+        "importance": 12.854537963867188,
+        "width_percent": 13.62
+      },
+      {
+        "feature": "sea_level_pressure_missing",
+        "label": "sea_level_pressure_missing（海平面气压缺失标记）",
+        "importance": 12.344722747802734,
+        "width_percent": 13.08
+      }
+    ],
+    "note": "此处只展示少量 gain 排名靠前特征，完整解释性分析留给特征解释页面。"
+  }
+}

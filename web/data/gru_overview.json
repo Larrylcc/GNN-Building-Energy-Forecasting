@@ -1,0 +1,213 @@
+{
+  "generated_at": "2026-04-27T11:45:00",
+  "headline_stats": {
+    "feature_count": 35,
+    "train_rows": 9534062,
+    "window_size": 168,
+    "best_epoch": 2,
+    "test_rmse": 0.10039715249817911
+  },
+  "source_artifacts": [
+    "gru_run_summary.json",
+    "gru_model_params.json",
+    "gru_training_history.csv",
+    "gru_time_series_split.csv"
+  ],
+  "runtime_policy": "FastAPI 运行时只读取 web/data/gru_overview.json，不读取大 CSV，也不加载 gru_final_model.pt。",
+  "data_input": {
+    "target_scale": "log1p + train min-max 后的 meter_reading",
+    "sequence_expression": "X[t-168:t] -> y[t]",
+    "feature_expression": "input_feature_cols = [meter_reading] + train_df.columns - {timestamp, meter_reading}",
+    "normalization_note": "GRU 输入特征在训练集上计算均值和标准差后做标准化；缺失和无穷值在标准化后置为 0。",
+    "split_files": [
+      {
+        "split": "train",
+        "filename": "log1p_minmax_train.csv",
+        "row_count": 9534062,
+        "window_count": 8699026
+      },
+      {
+        "split": "valid",
+        "filename": "log1p_minmax_valid.csv",
+        "row_count": 1208473,
+        "window_count": 1077942
+      },
+      {
+        "split": "test",
+        "filename": "log1p_minmax_test.csv",
+        "row_count": 1196500,
+        "window_count": 1131207
+      }
+    ],
+    "time_splits": [
+      {
+        "split": "train",
+        "start_timestamp": "2016-01-01 00:00:00",
+        "end_timestamp": "2016-10-19 18:00:00",
+        "row_count": 9534062
+      },
+      {
+        "split": "valid",
+        "start_timestamp": "2016-10-19 19:00:00",
+        "end_timestamp": "2016-11-25 09:00:00",
+        "row_count": 1208473
+      },
+      {
+        "split": "test",
+        "start_timestamp": "2016-11-25 10:00:00",
+        "end_timestamp": "2016-12-31 23:00:00",
+        "row_count": 1196500
+      }
+    ],
+    "feature_groups": [
+      {
+        "name": "历史目标反馈",
+        "description": "GRU 与 XGBoost 最大差异：上一段时间窗内的 meter_reading 也作为序列输入，用于学习自回归模式。",
+        "count": 1,
+        "features": [
+          {"feature": "meter_reading", "name_zh": "变换后历史读数", "label": "meter_reading（历史读数）"}
+        ]
+      },
+      {
+        "name": "分类特征",
+        "description": "站点、建筑、用途、仪表、风向和时间离散特征。",
+        "count": 12,
+        "features": [
+          {"feature": "site_id", "name_zh": "站点编号", "label": "site_id（站点编号）"},
+          {"feature": "building_id", "name_zh": "建筑编号", "label": "building_id（建筑编号）"},
+          {"feature": "primary_use", "name_zh": "建筑主要用途", "label": "primary_use（建筑主要用途）"},
+          {"feature": "meter", "name_zh": "仪表类型", "label": "meter（仪表类型）"},
+          {"feature": "wind_direction", "name_zh": "风向编码", "label": "wind_direction（风向编码）"},
+          {"feature": "beaufort_scale", "name_zh": "蒲福风级", "label": "beaufort_scale（蒲福风级）"},
+          {"feature": "month_datetime", "name_zh": "月份", "label": "month_datetime（月份）"},
+          {"feature": "weekofyear_datetime", "name_zh": "年内周序号", "label": "weekofyear_datetime（年内周序号）"},
+          {"feature": "hour_datetime", "name_zh": "小时", "label": "hour_datetime（小时）"},
+          {"feature": "day_week", "name_zh": "星期", "label": "day_week（星期）"},
+          {"feature": "day_month_datetime", "name_zh": "月内日期", "label": "day_month_datetime（月内日期）"},
+          {"feature": "week_month_datetime", "name_zh": "月内周序号", "label": "week_month_datetime（月内周序号）"}
+        ]
+      },
+      {
+        "name": "数值特征",
+        "description": "建筑面积、年份、天气观测和年内日序号等连续变量。",
+        "count": 9,
+        "features": [
+          {"feature": "square_feet", "name_zh": "建筑面积", "label": "square_feet（建筑面积）"},
+          {"feature": "year_built", "name_zh": "建造年份", "label": "year_built（建造年份）"},
+          {"feature": "age", "name_zh": "建筑年龄", "label": "age（建筑年龄）"},
+          {"feature": "air_temperature", "name_zh": "空气温度", "label": "air_temperature（空气温度）"},
+          {"feature": "cloud_coverage", "name_zh": "云量覆盖", "label": "cloud_coverage（云量覆盖）"},
+          {"feature": "dew_temperature", "name_zh": "露点温度", "label": "dew_temperature（露点温度）"},
+          {"feature": "precip_depth_1_hr", "name_zh": "1小时降水深度", "label": "precip_depth_1_hr（1小时降水深度）"},
+          {"feature": "floor_count", "name_zh": "楼层数", "label": "floor_count（楼层数）"},
+          {"feature": "dayofyear_datetime", "name_zh": "年内日序号", "label": "dayofyear_datetime（年内日序号）"}
+        ]
+      },
+      {
+        "name": "缺失指示与其他天气",
+        "description": "缺失二值标记，以及未归入上方数值组的海平面气压和风速。",
+        "count": 13,
+        "features": [
+          {"feature": "sea_level_pressure", "name_zh": "海平面气压", "label": "sea_level_pressure（海平面气压）"},
+          {"feature": "wind_speed", "name_zh": "风速", "label": "wind_speed（风速）"},
+          {"feature": "age_missing", "name_zh": "建筑年龄缺失标记", "label": "age_missing（建筑年龄缺失标记）"},
+          {"feature": "air_temperature_missing", "name_zh": "空气温度缺失标记", "label": "air_temperature_missing（空气温度缺失标记）"},
+          {"feature": "beaufort_scale_missing", "name_zh": "蒲福风级缺失标记", "label": "beaufort_scale_missing（蒲福风级缺失标记）"},
+          {"feature": "cloud_coverage_missing", "name_zh": "云量覆盖缺失标记", "label": "cloud_coverage_missing（云量覆盖缺失标记）"},
+          {"feature": "dew_temperature_missing", "name_zh": "露点温度缺失标记", "label": "dew_temperature_missing（露点温度缺失标记）"},
+          {"feature": "floor_count_missing", "name_zh": "楼层数缺失标记", "label": "floor_count_missing（楼层数缺失标记）"},
+          {"feature": "precip_depth_1_hr_missing", "name_zh": "1小时降水深度缺失标记", "label": "precip_depth_1_hr_missing（1小时降水深度缺失标记）"},
+          {"feature": "sea_level_pressure_missing", "name_zh": "海平面气压缺失标记", "label": "sea_level_pressure_missing（海平面气压缺失标记）"},
+          {"feature": "wind_direction_missing", "name_zh": "风向编码缺失标记", "label": "wind_direction_missing（风向编码缺失标记）"},
+          {"feature": "wind_speed_missing", "name_zh": "风速缺失标记", "label": "wind_speed_missing（风速缺失标记）"},
+          {"feature": "year_built_missing", "name_zh": "建造年份缺失标记", "label": "year_built_missing（建造年份缺失标记）"}
+        ]
+      }
+    ]
+  },
+  "model": {
+    "torch_version": "2.11.0+cu128",
+    "device": "cuda:0",
+    "algorithm": "GRU sequence regression",
+    "prediction_scale": "y_scaled",
+    "prediction_note": "模型输出为下一小时的变换后 meter_reading，评估阶段会把预测值回填到后续时间窗，形成 auto-rolling 递推预测。",
+    "model_config": {
+      "input_size": 35,
+      "hidden_size": 128,
+      "num_layers": 2,
+      "dropout": 0.1
+    },
+    "training_config": {
+      "window_size": 168,
+      "stride": 1,
+      "batch_size": 1024,
+      "eval_batch_size": 2048,
+      "epochs": 20,
+      "patience": 3,
+      "learning_rate": 0.001,
+      "weight_decay": 0.00001,
+      "grad_clip_norm": 1.0,
+      "seed": 42
+    },
+    "parameter_cards": [
+      {"name": "input_size", "value": 35, "description": "每个小时步输入的特征维度。"},
+      {"name": "window_size", "value": 168, "description": "每次用前 168 小时历史预测下一小时。"},
+      {"name": "hidden_size", "value": 128, "description": "GRU 隐状态维度。"},
+      {"name": "num_layers", "value": 2, "description": "堆叠 GRU 层数。"},
+      {"name": "dropout", "value": 0.1, "description": "多层 GRU 之间的 dropout 比例。"},
+      {"name": "batch_size", "value": 1024, "description": "训练阶段每批序列窗口数量。"},
+      {"name": "learning_rate", "value": 0.001, "description": "AdamW 优化器学习率。"},
+      {"name": "weight_decay", "value": 0.00001, "description": "AdamW 权重衰减。"},
+      {"name": "grad_clip_norm", "value": 1.0, "description": "反向传播后梯度范数裁剪阈值。"},
+      {"name": "patience", "value": 3, "description": "验证集 RMSE 连续未提升后的早停等待轮数。"},
+      {"name": "eval_batch_size", "value": 2048, "description": "滚动评估阶段每批预测序列数量。"},
+      {"name": "seed", "value": 42, "description": "随机种子。"}
+    ],
+    "flow_steps": [
+      "读取 log1p_minmax_train / valid / test，并按 building_id、meter、timestamp 稳定排序。",
+      "把历史 meter_reading 与 34 个外生特征拼成 35 维小时级输入，并用训练集均值和标准差标准化。",
+      "按同一建筑和仪表的连续小时片段构造 168 小时时间窗，窗口目标是紧随其后的 meter_reading。",
+      "GRU 读取形状为 batch x 168 x 35 的序列，取最后一层最后时刻隐状态。",
+      "线性回归头把 128 维隐状态映射为下一小时 y_scaled 预测值。",
+      "valid/test 采用 auto-rolling：预测值会替代真实历史读数回填到后续窗口，再计算 MSE、MAE、RMSE、R2、SMAPE。"
+    ]
+  },
+  "training": {
+    "best_epoch": 2,
+    "history": [
+      {"epoch": 1, "train_loss": 0.0006188835726935034, "validation_rmse": 0.2055655067272465, "validation_r2": -0.48573545297369924, "rmse_width_percent": 100.0},
+      {"epoch": 2, "train_loss": 0.0003688894224431574, "validation_rmse": 0.10531675114827749, "validation_r2": 0.6100257718537807, "rmse_width_percent": 51.23},
+      {"epoch": 3, "train_loss": 0.00031339430413254005, "validation_rmse": 0.11540646416332861, "validation_r2": 0.531724678194078, "rmse_width_percent": 56.14},
+      {"epoch": 4, "train_loss": 0.0002848923011214102, "validation_rmse": 0.1239536228325702, "validation_r2": 0.4597939427408102, "rmse_width_percent": 60.30},
+      {"epoch": 5, "train_loss": 0.00026609197651042323, "validation_rmse": 0.11411752552574903, "validation_r2": 0.5421263064218251, "rmse_width_percent": 55.51}
+    ],
+    "note": "训练记录保存到第 5 轮；最佳验证 RMSE 出现在第 2 轮，最终模型使用该轮参数。"
+  },
+  "metrics": {
+    "scale_note": "所有指标均在 log1p + train min-max 后的目标尺度上计算，不是原始 meter_reading 尺度。",
+    "validation": {
+      "mse": 0.011091618072428209,
+      "mae": 0.0677131764455845,
+      "rmse": 0.10531675114827749,
+      "r2": 0.6100257718537807,
+      "smape": 19.26808529897474,
+      "evaluated_row_count": 1077942,
+      "skipped_row_count": 130531
+    },
+    "test": {
+      "mse": 0.010079588229742632,
+      "mae": 0.06842781929270296,
+      "rmse": 0.10039715249817911,
+      "r2": 0.641109589603407,
+      "smape": 19.02206725029842,
+      "evaluated_row_count": 1131207,
+      "skipped_row_count": 65293
+    }
+  },
+  "rolling_evaluation": {
+    "key_fields": ["building_id", "meter"],
+    "history_source": "valid 评估可使用 train 尾部历史，test 评估可使用 train + valid 尾部历史。",
+    "skip_rule": "如果某个 building_id + meter 没有足够连续 168 小时历史，或上一小时不连续，则该行跳过评估。",
+    "feedback_rule": "每个时间戳批次预测完成后，将预测的 meter_reading 标准化值回填进对应序列历史，用于后续小时预测。"
+  }
+}

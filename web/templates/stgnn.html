@@ -1,0 +1,391 @@
+{% extends "base.html" %}
+
+{% block title %}STGNN - ASHRAE 建筑能耗预测{% endblock %}
+
+{% block content %}
+<section class="page-hero slim">
+  <div>
+    <p class="eyebrow">Spatio-Temporal Baseline</p>
+    <h1>STGNN GCN-GRU</h1>
+    <p class="hero-copy">
+      本页展示 STGNN baseline 的稠密图序列输入、可学习 Top-K 图构造、GCN-GRU 结构和 auto-rolling 测评结果。
+      {{ stgnn.runtime_policy }}
+    </p>
+  </div>
+</section>
+
+<section class="stat-grid" aria-label="STGNN 核心统计">
+  <article class="stat-card">
+    <span>建筑节点数</span>
+    <strong>{{ "{:,}".format(stgnn.headline_stats.node_count) }}</strong>
+    <small>由训练集 building_id 建图</small>
+  </article>
+  <article class="stat-card">
+    <span>节点特征数</span>
+    <strong>{{ stgnn.headline_stats.feature_count }}</strong>
+    <small>含历史 meter_reading</small>
+  </article>
+  <article class="stat-card">
+    <span>最佳 Epoch</span>
+    <strong>{{ stgnn.headline_stats.best_epoch }}</strong>
+    <small>按 validation RMSE 选择</small>
+  </article>
+  <article class="stat-card">
+    <span>Test RMSE</span>
+    <strong>{{ "%.6f"|format(stgnn.headline_stats.test_rmse) }}</strong>
+    <small>变换后目标尺度</small>
+  </article>
+</section>
+
+<section class="content-band">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">Input</p>
+      <h2>数据如何组织成图序列</h2>
+    </div>
+    <span class="stage-badge">{{ stgnn.data_input.target_scale }}</span>
+  </div>
+  <p class="muted-copy">
+    STGNN 的输入是全局图时间窗，而不是单行样本。脚本使用
+    <code>{{ stgnn.data_input.tensor_expression }}</code> 构造监督学习样本。
+  </p>
+
+  <div class="stage-split-grid">
+    <article class="summary-panel">
+      <h4>输入文件、节点覆盖与窗口数</h4>
+      <div class="table-wrap compact-table">
+        <table>
+          <thead>
+            <tr>
+              <th>集合</th>
+              <th>原始行数</th>
+              <th>纳入行数</th>
+              <th>时间戳数</th>
+              <th>窗口/评估行</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for file in stgnn.data_input.split_files %}
+            <tr>
+              <td><code>{{ file.split }}</code></td>
+              <td>{{ "{:,}".format(file.raw_row_count) }}</td>
+              <td>{{ "{:,}".format(file.included_row_count) }}</td>
+              <td>{{ "{:,}".format(file.timestamp_count) }}</td>
+              <td>{{ "{:,}".format(file.window_count) }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </article>
+    <article class="summary-panel">
+      <h4>时间切分</h4>
+      <div class="table-wrap compact-table">
+        <table>
+          <thead>
+            <tr>
+              <th>集合</th>
+              <th>开始时间</th>
+              <th>结束时间</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for split in stgnn.data_input.time_splits %}
+            <tr>
+              <td><code>{{ split.split }}</code></td>
+              <td>{{ split.start_timestamp }}</td>
+              <td>{{ split.end_timestamp }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </article>
+  </div>
+
+  <div class="stage-split-grid stage-subsection">
+    <article class="summary-panel">
+      <h4>图序列张量形状</h4>
+      <div class="stgnn-shape" aria-label="STGNN 输入形状">
+        <span>batch</span>
+        <strong>x</strong>
+        <span>{{ stgnn.model.training_config.window_size }} hours</span>
+        <strong>x</strong>
+        <span>{{ "{:,}".format(stgnn.model.model_config.node_count) }} nodes</span>
+        <strong>x</strong>
+        <span>{{ stgnn.model.model_config.input_size }} features</span>
+      </div>
+      <p>{{ stgnn.data_input.dense_note }}</p>
+    </article>
+    <article class="summary-panel">
+      <h4>输入列表达式</h4>
+      <p><code>{{ stgnn.data_input.feature_expression }}</code></p>
+      <p>
+        每个节点保留历史 <code>meter_reading</code>，并把同一时间戳下全部建筑节点同时送入模型。
+      </p>
+    </article>
+  </div>
+
+  <div class="stage-subsection">
+    <h4>节点输入特征分组</h4>
+    <div class="field-grid xgb-feature-grid">
+      {% for group in stgnn.data_input.feature_groups %}
+      <article class="field-panel">
+        <h3>{{ group.name }} <span class="feature-count">{{ group.count }}</span></h3>
+        <p>{{ group.description }}</p>
+        <div class="chip-list">
+          {% for feature in group.features %}
+          <code class="code-chip">{{ feature.label }}</code>
+          {% endfor %}
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="content-band">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">Graph</p>
+      <h2>可学习图结构</h2>
+    </div>
+    <span class="stage-badge">Top-K {{ stgnn.graph.graph_top_k }}</span>
+  </div>
+  <p class="muted-copy">{{ stgnn.graph.adjacency_note }}</p>
+
+  <div class="stage-split-grid">
+    <article class="summary-panel">
+      <h4>图构造摘要</h4>
+      <dl class="metric-dl">
+        <div>
+          <dt>节点数</dt>
+          <dd>{{ "{:,}".format(stgnn.graph.node_count) }}</dd>
+        </div>
+        <div>
+          <dt>嵌入维度</dt>
+          <dd>{{ stgnn.graph.embed_dim }}</dd>
+        </div>
+        <div>
+          <dt>测试未见节点行</dt>
+          <dd>{{ "{:,}".format(stgnn.graph.test_unknown_node_row_count) }}</dd>
+        </div>
+      </dl>
+    </article>
+    <article class="summary-panel">
+      <h4>Top-K 边样例</h4>
+      <div class="importance-list">
+        {% for edge in stgnn.graph.top_edges %}
+        <div class="importance-row">
+          <span class="importance-label">
+            {{ edge.source_building_id }} -> {{ edge.target_building_id }}{% if edge.is_self_loop %}（self）{% endif %}
+          </span>
+          <div class="importance-track">
+            <span style="width: {{ edge.width_percent }}%"></span>
+          </div>
+          <strong>{{ "%.6f"|format(edge.weight) }}</strong>
+        </div>
+        {% endfor %}
+      </div>
+    </article>
+  </div>
+</section>
+
+<section class="content-band">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">Structure</p>
+      <h2>模型结构与计算流程</h2>
+    </div>
+    <span class="stage-badge">{{ stgnn.model.algorithm }}</span>
+  </div>
+  <div class="model-flow" aria-label="STGNN 模型结构流程图">
+    {% for step in stgnn.model.flow_steps %}
+    <article class="model-flow-node summary-panel">
+      <div class="model-flow-card-head">
+        <strong>步骤 {{ loop.index }}</strong>
+      </div>
+      <p>{{ step }}</p>
+      {% if loop.index == 1 %}
+      <p class="model-flow-explain">
+        节点集合只由训练集确定；测试集中训练未见建筑节点会被记录为 unknown node 并跳过评分。
+      </p>
+      {% elif loop.index == 2 %}
+      <p class="model-flow-explain">
+        稠密矩阵让每个时间戳都包含完整节点维度，观测 mask 决定哪些节点参与损失与指标。
+      </p>
+      {% elif loop.index == 3 %}
+      <p class="model-flow-explain">
+        邻接矩阵不是手工距离图，而是由可学习节点嵌入在训练中自动形成。
+      </p>
+      {% elif loop.index == 4 %}
+      <p class="model-flow-explain">
+        GCN 层使用残差更新，并通过层注意力融合多层空间表示。
+      </p>
+      {% elif loop.index == 5 %}
+      <p class="model-flow-explain">
+        GRU 对每个建筑节点独立读取 168 小时空间增强后的时间序列。
+      </p>
+      {% elif loop.index == 6 %}
+      <p class="model-flow-explain">
+        auto-rolling 更贴近部署场景：后续窗口会使用模型自己的历史预测。
+      </p>
+      {% endif %}
+    </article>
+    {% endfor %}
+  </div>
+
+  <div class="stage-split-grid stage-subsection">
+    <article class="summary-panel">
+      <h4>GCN-GRU 输出</h4>
+      <p>
+        模型一次输出所有建筑节点的下一小时 <code>{{ stgnn.model.prediction_scale }}</code>，
+        指标只在当前时间戳真实观测到的节点上计算。
+      </p>
+      <div class="math-card">
+        <math display="block">
+          <msub><mover><mi>Y</mi><mo>^</mo></mover><mrow><mi>t</mi></mrow></msub>
+          <mo>=</mo>
+          <mi>Head</mi>
+          <mo stretchy="false">(</mo>
+          <mi>GRU</mi>
+          <mo stretchy="false">(</mo>
+          <mi>GCN</mi>
+          <mo stretchy="false">(</mo>
+          <msub><mi>X</mi><mrow><mi>t</mi><mo>-</mo><mn>168</mn><mo>:</mo><mi>t</mi></mrow></msub>
+          <mo stretchy="false">)</mo>
+          <mo stretchy="false">)</mo>
+          <mo stretchy="false">)</mo>
+        </math>
+      </div>
+      <p class="muted-copy">{{ stgnn.model.prediction_note }}</p>
+    </article>
+    <article class="summary-panel">
+      <h4>Auto-Rolling 规则</h4>
+      <p>{{ stgnn.rolling_evaluation.history_source }}</p>
+      <p>{{ stgnn.rolling_evaluation.skip_rule }}</p>
+      <p>{{ stgnn.rolling_evaluation.feedback_rule }}</p>
+    </article>
+  </div>
+</section>
+
+<section class="content-band">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">Parameters</p>
+      <h2>关键训练参数</h2>
+    </div>
+    <span class="stage-badge">PyTorch {{ stgnn.model.torch_version }} / {{ stgnn.model.device }}</span>
+  </div>
+  <div class="table-wrap parameter-table">
+    <table>
+      <thead>
+        <tr>
+          <th>参数</th>
+          <th>取值</th>
+          <th>说明</th>
+          <th>参数</th>
+          <th>取值</th>
+          <th>说明</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for pair in stgnn.model.parameter_cards|batch(2, none) %}
+        <tr>
+          {% for param in pair %}
+            {% if param %}
+            <td><code>{{ param.name }}</code></td>
+            <td><strong>{{ param.value }}</strong></td>
+            <td>{{ param.description }}</td>
+            {% else %}
+            <td></td>
+            <td></td>
+            <td></td>
+            {% endif %}
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="content-band">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">Training</p>
+      <h2>训练过程摘要</h2>
+    </div>
+    <span class="stage-badge">best epoch {{ stgnn.training.best_epoch }}</span>
+  </div>
+  <p class="muted-copy">{{ stgnn.training.note }}</p>
+  <div class="gru-history-list">
+    {% for item in stgnn.training.history %}
+    <div class="gru-history-row{% if item.epoch == stgnn.training.best_epoch %} best{% endif %}">
+      <span>Epoch {{ item.epoch }}</span>
+      <div class="importance-track">
+        <span style="width: {{ item.rmse_width_percent }}%"></span>
+      </div>
+      <strong>RMSE {{ "%.6f"|format(item.validation_rmse) }}</strong>
+      <small>loss {{ "%.6f"|format(item.train_loss) }} / R2 {{ "%.4f"|format(item.validation_r2) }}</small>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="content-band">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">Metrics</p>
+      <h2>输出与测评得分</h2>
+    </div>
+    <span class="stage-badge">auto-rolling valid / test</span>
+  </div>
+  <p class="important-text">{{ stgnn.metrics.scale_note }}</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>集合</th>
+          <th>MSE</th>
+          <th>MAE</th>
+          <th>RMSE</th>
+          <th>R2</th>
+          <th>SMAPE</th>
+          <th>评估行数</th>
+          <th>跳过行数</th>
+          <th>评估时间戳</th>
+          <th>未知节点行</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>validation</code></td>
+          <td>{{ "%.6f"|format(stgnn.metrics.validation.mse) }}</td>
+          <td>{{ "%.6f"|format(stgnn.metrics.validation.mae) }}</td>
+          <td>{{ "%.6f"|format(stgnn.metrics.validation.rmse) }}</td>
+          <td>{{ "%.6f"|format(stgnn.metrics.validation.r2) }}</td>
+          <td>{{ "%.4f"|format(stgnn.metrics.validation.smape) }}</td>
+          <td>{{ "{:,}".format(stgnn.metrics.validation.evaluated_row_count) }}</td>
+          <td>{{ "{:,}".format(stgnn.metrics.validation.skipped_row_count) }}</td>
+          <td>{{ "{:,}".format(stgnn.metrics.validation.evaluated_timestamp_count) }}</td>
+          <td>{{ "{:,}".format(stgnn.metrics.validation.unknown_node_row_count) }}</td>
+        </tr>
+        <tr>
+          <td><code>test</code></td>
+          <td>{{ "%.6f"|format(stgnn.metrics.test.mse) }}</td>
+          <td>{{ "%.6f"|format(stgnn.metrics.test.mae) }}</td>
+          <td>{{ "%.6f"|format(stgnn.metrics.test.rmse) }}</td>
+          <td>{{ "%.6f"|format(stgnn.metrics.test.r2) }}</td>
+          <td>{{ "%.4f"|format(stgnn.metrics.test.smape) }}</td>
+          <td>{{ "{:,}".format(stgnn.metrics.test.evaluated_row_count) }}</td>
+          <td>{{ "{:,}".format(stgnn.metrics.test.skipped_row_count) }}</td>
+          <td>{{ "{:,}".format(stgnn.metrics.test.evaluated_timestamp_count) }}</td>
+          <td>{{ "{:,}".format(stgnn.metrics.test.unknown_node_row_count) }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

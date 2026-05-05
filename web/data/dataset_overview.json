@@ -1,0 +1,548 @@
+{
+  "generated_at": "2026-04-27T11:21:37",
+  "source": {
+    "competition": "ASHRAE Great Energy Predictor III",
+    "project_topic": "建筑能耗预测",
+    "runtime_policy": "FastAPI 运行时只读取 web/data 下的小型 JSON 文件，不读取原始大 CSV。"
+  },
+  "headline_stats": {
+    "train_rows": 20216100,
+    "buildings": 1449,
+    "sites": 16,
+    "primary_uses": 16,
+    "time_start": "2016-01-01 00:00:00",
+    "time_end": "2016-12-31 23:00:00"
+  },
+  "files": [
+    {
+      "filename": "train.csv",
+      "purpose": "小时级训练标签",
+      "row_count": 20216100,
+      "column_count": 4,
+      "size_mb": 647.18
+    },
+    {
+      "filename": "weather_train.csv",
+      "purpose": "训练期站点天气",
+      "row_count": 139773,
+      "column_count": 9,
+      "size_mb": 7.1
+    },
+    {
+      "filename": "building_metadata.csv",
+      "purpose": "建筑静态属性",
+      "row_count": 1449,
+      "column_count": 6,
+      "size_mb": 0.04
+    }
+  ],
+  "field_groups": [
+    {
+      "name": "train.csv",
+      "description": "训练集主表，记录建筑、仪表类型、时间戳和目标能耗读数。",
+      "fields": [
+        {
+          "name": "building_id",
+          "type": "int",
+          "description": "建筑编号，与建筑元数据表关联。"
+        },
+        {
+          "name": "meter",
+          "type": "int",
+          "description": "仪表类型，0/1/2/3 分别代表电、冷水、蒸汽、热水。"
+        },
+        {
+          "name": "timestamp",
+          "type": "datetime",
+          "description": "小时级时间戳。"
+        },
+        {
+          "name": "meter_reading",
+          "type": "float",
+          "description": "目标变量，建筑能耗读数。"
+        }
+      ]
+    },
+    {
+      "name": "building_metadata.csv",
+      "description": "建筑静态属性表，提供建筑用途、面积、建造年份等信息。",
+      "fields": [
+        {
+          "name": "site_id",
+          "type": "int",
+          "description": "站点编号，用于关联天气数据。"
+        },
+        {
+          "name": "building_id",
+          "type": "int",
+          "description": "建筑编号。"
+        },
+        {
+          "name": "primary_use",
+          "type": "category",
+          "description": "建筑主要用途。"
+        },
+        {
+          "name": "square_feet",
+          "type": "int",
+          "description": "建筑面积。"
+        },
+        {
+          "name": "year_built",
+          "type": "float",
+          "description": "建造年份，存在缺失。"
+        },
+        {
+          "name": "floor_count",
+          "type": "float",
+          "description": "楼层数，存在较多缺失。"
+        }
+      ]
+    },
+    {
+      "name": "weather_train.csv",
+      "description": "训练期天气表，按站点和小时记录气温、云量、降水、风速等天气变量。",
+      "fields": [
+        {
+          "name": "site_id",
+          "type": "int",
+          "description": "站点编号。"
+        },
+        {
+          "name": "timestamp",
+          "type": "datetime",
+          "description": "小时级时间戳。"
+        },
+        {
+          "name": "air_temperature",
+          "type": "float",
+          "description": "空气温度。"
+        },
+        {
+          "name": "cloud_coverage",
+          "type": "float",
+          "description": "云量覆盖。"
+        },
+        {
+          "name": "dew_temperature",
+          "type": "float",
+          "description": "露点温度。"
+        },
+        {
+          "name": "precip_depth_1_hr",
+          "type": "float",
+          "description": "1 小时降水深度。"
+        },
+        {
+          "name": "sea_level_pressure",
+          "type": "float",
+          "description": "海平面气压。"
+        },
+        {
+          "name": "wind_direction",
+          "type": "float",
+          "description": "风向角度。"
+        },
+        {
+          "name": "wind_speed",
+          "type": "float",
+          "description": "风速。"
+        }
+      ]
+    }
+  ],
+  "train": {
+    "filename": "train.csv",
+    "size_mb": 647.18,
+    "row_count": 20216100,
+    "column_count": 4,
+    "columns": [
+      "building_id",
+      "meter",
+      "timestamp",
+      "meter_reading"
+    ],
+    "time_range": {
+      "start": "2016-01-01 00:00:00",
+      "end": "2016-12-31 23:00:00"
+    },
+    "building_count": 1449,
+    "meter_distribution": [
+      {
+        "meter": 0,
+        "label": "electricity",
+        "count": 12060910,
+        "percent": 59.66
+      },
+      {
+        "meter": 1,
+        "label": "chilled water",
+        "count": 4182440,
+        "percent": 20.69
+      },
+      {
+        "meter": 2,
+        "label": "steam",
+        "count": 2708713,
+        "percent": 13.4
+      },
+      {
+        "meter": 3,
+        "label": "hot water",
+        "count": 1264037,
+        "percent": 6.25
+      }
+    ],
+    "meter_reading_stats": {
+      "min": 0.0,
+      "max": 21904700.0,
+      "mean": 2117.1211
+    },
+    "missing_summary": [
+      {
+        "column": "building_id",
+        "missing_count": 0,
+        "missing_percent": 0.0
+      },
+      {
+        "column": "meter",
+        "missing_count": 0,
+        "missing_percent": 0.0
+      },
+      {
+        "column": "timestamp",
+        "missing_count": 0,
+        "missing_percent": 0.0
+      },
+      {
+        "column": "meter_reading",
+        "missing_count": 0,
+        "missing_percent": 0.0
+      }
+    ],
+    "sample_rows": [
+      {
+        "building_id": 0,
+        "meter": 0,
+        "timestamp": "2016-01-01 00:00:00",
+        "meter_reading": 0.0
+      },
+      {
+        "building_id": 1,
+        "meter": 0,
+        "timestamp": "2016-01-01 00:00:00",
+        "meter_reading": 0.0
+      },
+      {
+        "building_id": 2,
+        "meter": 0,
+        "timestamp": "2016-01-01 00:00:00",
+        "meter_reading": 0.0
+      },
+      {
+        "building_id": 3,
+        "meter": 0,
+        "timestamp": "2016-01-01 00:00:00",
+        "meter_reading": 0.0
+      },
+      {
+        "building_id": 4,
+        "meter": 0,
+        "timestamp": "2016-01-01 00:00:00",
+        "meter_reading": 0.0
+      },
+      {
+        "building_id": 5,
+        "meter": 0,
+        "timestamp": "2016-01-01 00:00:00",
+        "meter_reading": 0.0
+      }
+    ]
+  },
+  "weather_train": {
+    "filename": "weather_train.csv",
+    "size_mb": 7.1,
+    "row_count": 139773,
+    "column_count": 9,
+    "columns": [
+      "site_id",
+      "timestamp",
+      "air_temperature",
+      "cloud_coverage",
+      "dew_temperature",
+      "precip_depth_1_hr",
+      "sea_level_pressure",
+      "wind_direction",
+      "wind_speed"
+    ],
+    "site_count": 16,
+    "time_range": {
+      "start": "2016-01-01 00:00:00",
+      "end": "2016-12-31 23:00:00"
+    },
+    "missing_summary": [
+      {
+        "column": "cloud_coverage",
+        "missing_count": 69173,
+        "missing_percent": 49.4895
+      },
+      {
+        "column": "precip_depth_1_hr",
+        "missing_count": 50289,
+        "missing_percent": 35.9791
+      },
+      {
+        "column": "sea_level_pressure",
+        "missing_count": 10618,
+        "missing_percent": 7.5966
+      },
+      {
+        "column": "wind_direction",
+        "missing_count": 6268,
+        "missing_percent": 4.4844
+      },
+      {
+        "column": "wind_speed",
+        "missing_count": 304,
+        "missing_percent": 0.2175
+      },
+      {
+        "column": "dew_temperature",
+        "missing_count": 113,
+        "missing_percent": 0.0808
+      },
+      {
+        "column": "air_temperature",
+        "missing_count": 55,
+        "missing_percent": 0.0393
+      },
+      {
+        "column": "site_id",
+        "missing_count": 0,
+        "missing_percent": 0.0
+      }
+    ],
+    "sample_rows": [
+      {
+        "site_id": 0,
+        "timestamp": "2016-01-01 00:00:00",
+        "air_temperature": 25.0,
+        "cloud_coverage": 6.0,
+        "dew_temperature": 20.0,
+        "precip_depth_1_hr": NaN,
+        "sea_level_pressure": 1019.7,
+        "wind_direction": 0.0,
+        "wind_speed": 0.0
+      },
+      {
+        "site_id": 0,
+        "timestamp": "2016-01-01 01:00:00",
+        "air_temperature": 24.4,
+        "cloud_coverage": NaN,
+        "dew_temperature": 21.1,
+        "precip_depth_1_hr": -1.0,
+        "sea_level_pressure": 1020.2,
+        "wind_direction": 70.0,
+        "wind_speed": 1.5
+      },
+      {
+        "site_id": 0,
+        "timestamp": "2016-01-01 02:00:00",
+        "air_temperature": 22.8,
+        "cloud_coverage": 2.0,
+        "dew_temperature": 21.1,
+        "precip_depth_1_hr": 0.0,
+        "sea_level_pressure": 1020.2,
+        "wind_direction": 0.0,
+        "wind_speed": 0.0
+      },
+      {
+        "site_id": 0,
+        "timestamp": "2016-01-01 03:00:00",
+        "air_temperature": 21.1,
+        "cloud_coverage": 2.0,
+        "dew_temperature": 20.6,
+        "precip_depth_1_hr": 0.0,
+        "sea_level_pressure": 1020.1,
+        "wind_direction": 0.0,
+        "wind_speed": 0.0
+      },
+      {
+        "site_id": 0,
+        "timestamp": "2016-01-01 04:00:00",
+        "air_temperature": 20.0,
+        "cloud_coverage": 2.0,
+        "dew_temperature": 20.0,
+        "precip_depth_1_hr": -1.0,
+        "sea_level_pressure": 1020.0,
+        "wind_direction": 250.0,
+        "wind_speed": 2.6
+      },
+      {
+        "site_id": 0,
+        "timestamp": "2016-01-01 05:00:00",
+        "air_temperature": 19.4,
+        "cloud_coverage": NaN,
+        "dew_temperature": 19.4,
+        "precip_depth_1_hr": 0.0,
+        "sea_level_pressure": NaN,
+        "wind_direction": 0.0,
+        "wind_speed": 0.0
+      }
+    ]
+  },
+  "building_metadata": {
+    "filename": "building_metadata.csv",
+    "size_mb": 0.04,
+    "row_count": 1449,
+    "column_count": 6,
+    "columns": [
+      "site_id",
+      "building_id",
+      "primary_use",
+      "square_feet",
+      "year_built",
+      "floor_count"
+    ],
+    "building_count": 1449,
+    "site_count": 16,
+    "primary_use_count": 16,
+    "primary_use_distribution": [
+      {
+        "primary_use": "Education",
+        "count": 549,
+        "percent": 37.89
+      },
+      {
+        "primary_use": "Office",
+        "count": 279,
+        "percent": 19.25
+      },
+      {
+        "primary_use": "Entertainment/public assembly",
+        "count": 184,
+        "percent": 12.7
+      },
+      {
+        "primary_use": "Public services",
+        "count": 156,
+        "percent": 10.77
+      },
+      {
+        "primary_use": "Lodging/residential",
+        "count": 147,
+        "percent": 10.14
+      },
+      {
+        "primary_use": "Other",
+        "count": 25,
+        "percent": 1.73
+      },
+      {
+        "primary_use": "Healthcare",
+        "count": 23,
+        "percent": 1.59
+      },
+      {
+        "primary_use": "Parking",
+        "count": 22,
+        "percent": 1.52
+      },
+      {
+        "primary_use": "Warehouse/storage",
+        "count": 13,
+        "percent": 0.9
+      },
+      {
+        "primary_use": "Manufacturing/industrial",
+        "count": 12,
+        "percent": 0.83
+      }
+    ],
+    "missing_summary": [
+      {
+        "column": "floor_count",
+        "missing_count": 1094,
+        "missing_percent": 75.5003
+      },
+      {
+        "column": "year_built",
+        "missing_count": 774,
+        "missing_percent": 53.4161
+      },
+      {
+        "column": "site_id",
+        "missing_count": 0,
+        "missing_percent": 0.0
+      },
+      {
+        "column": "building_id",
+        "missing_count": 0,
+        "missing_percent": 0.0
+      },
+      {
+        "column": "primary_use",
+        "missing_count": 0,
+        "missing_percent": 0.0
+      },
+      {
+        "column": "square_feet",
+        "missing_count": 0,
+        "missing_percent": 0.0
+      }
+    ],
+    "sample_rows": [
+      {
+        "site_id": 0,
+        "building_id": 0,
+        "primary_use": "Education",
+        "square_feet": 7432,
+        "year_built": 2008.0,
+        "floor_count": NaN
+      },
+      {
+        "site_id": 0,
+        "building_id": 1,
+        "primary_use": "Education",
+        "square_feet": 2720,
+        "year_built": 2004.0,
+        "floor_count": NaN
+      },
+      {
+        "site_id": 0,
+        "building_id": 2,
+        "primary_use": "Education",
+        "square_feet": 5376,
+        "year_built": 1991.0,
+        "floor_count": NaN
+      },
+      {
+        "site_id": 0,
+        "building_id": 3,
+        "primary_use": "Education",
+        "square_feet": 23685,
+        "year_built": 2002.0,
+        "floor_count": NaN
+      },
+      {
+        "site_id": 0,
+        "building_id": 4,
+        "primary_use": "Education",
+        "square_feet": 116607,
+        "year_built": 1975.0,
+        "floor_count": NaN
+      },
+      {
+        "site_id": 0,
+        "building_id": 5,
+        "primary_use": "Education",
+        "square_feet": 8000,
+        "year_built": 2000.0,
+        "floor_count": NaN
+      }
+    ]
+  },
+  "notes": [
+    "数据概况参考 ashrae-start-here-a-gentle-introduction.ipynb 中 Data、Glimpse of Data、Missing Values 部分。"
+  ]
+}

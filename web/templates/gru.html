@@ -1,0 +1,339 @@
+{% extends "base.html" %}
+
+{% block title %}GRU - ASHRAE 建筑能耗预测{% endblock %}
+
+{% block content %}
+<section class="page-hero slim">
+  <div>
+    <p class="eyebrow">Sequence Baseline</p>
+    <h1>GRU Auto-Rolling</h1>
+    <p class="hero-copy">
+      本页展示 GRU baseline 的序列窗口构造、模型结构、auto-rolling 评估逻辑和测试结果。
+      {{ gru.runtime_policy }}
+    </p>
+  </div>
+</section>
+
+<section class="stat-grid" aria-label="GRU 核心统计">
+  <article class="stat-card">
+    <span>输入特征数</span>
+    <strong>{{ gru.headline_stats.feature_count }}</strong>
+    <small>含历史 meter_reading</small>
+  </article>
+  <article class="stat-card">
+    <span>训练窗口</span>
+    <strong>{{ "{:,}".format(gru.data_input.split_files[0].window_count) }}</strong>
+    <small>168 小时连续历史</small>
+  </article>
+  <article class="stat-card">
+    <span>最佳 Epoch</span>
+    <strong>{{ gru.headline_stats.best_epoch }}</strong>
+    <small>按 validation RMSE 选择</small>
+  </article>
+  <article class="stat-card">
+    <span>Test RMSE</span>
+    <strong>{{ "%.6f"|format(gru.headline_stats.test_rmse) }}</strong>
+    <small>变换后目标尺度</small>
+  </article>
+</section>
+
+<section class="content-band">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">Input</p>
+      <h2>数据如何组织成序列窗口</h2>
+    </div>
+    <span class="stage-badge">{{ gru.data_input.target_scale }}</span>
+  </div>
+  <p class="muted-copy">
+    GRU 输入不是单行表格特征，而是同一 <code>building_id</code> + <code>meter</code> 下连续 168 小时的序列。
+    脚本使用 <code>{{ gru.data_input.sequence_expression }}</code> 构造监督样本。
+  </p>
+
+  <div class="stage-split-grid">
+    <article class="summary-panel">
+      <h4>输入文件、行数与窗口数</h4>
+      <div class="table-wrap compact-table">
+        <table>
+          <thead>
+            <tr>
+              <th>集合</th>
+              <th>文件</th>
+              <th>行数</th>
+              <th>窗口数</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for file in gru.data_input.split_files %}
+            <tr>
+              <td><code>{{ file.split }}</code></td>
+              <td><code>{{ file.filename }}</code></td>
+              <td>{{ "{:,}".format(file.row_count) }}</td>
+              <td>{{ "{:,}".format(file.window_count) }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </article>
+    <article class="summary-panel">
+      <h4>时间切分</h4>
+      <div class="table-wrap compact-table">
+        <table>
+          <thead>
+            <tr>
+              <th>集合</th>
+              <th>开始时间</th>
+              <th>结束时间</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for split in gru.data_input.time_splits %}
+            <tr>
+              <td><code>{{ split.split }}</code></td>
+              <td>{{ split.start_timestamp }}</td>
+              <td>{{ split.end_timestamp }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </article>
+  </div>
+
+  <div class="stage-split-grid stage-subsection">
+    <article class="summary-panel">
+      <h4>窗口样本形状</h4>
+      <div class="gru-shape" aria-label="GRU 输入形状">
+        <span>batch</span>
+        <strong>x</strong>
+        <span>{{ gru.model.training_config.window_size }} hours</span>
+        <strong>x</strong>
+        <span>{{ gru.model.model_config.input_size }} features</span>
+      </div>
+      <p>{{ gru.data_input.normalization_note }}</p>
+    </article>
+    <article class="summary-panel">
+      <h4>输入列表达式</h4>
+      <p><code>{{ gru.data_input.feature_expression }}</code></p>
+      <p>
+        与 XGBoost 页面不同，GRU 显式保留历史 <code>meter_reading</code> 作为序列输入，用来学习小时级自相关。
+      </p>
+    </article>
+  </div>
+
+  <div class="stage-subsection">
+    <h4>模型输入特征分组</h4>
+    <div class="field-grid xgb-feature-grid">
+      {% for group in gru.data_input.feature_groups %}
+      <article class="field-panel">
+        <h3>{{ group.name }} <span class="feature-count">{{ group.count }}</span></h3>
+        <p>{{ group.description }}</p>
+        <div class="chip-list">
+          {% for feature in group.features %}
+          <code class="code-chip">{{ feature.label }}</code>
+          {% endfor %}
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="content-band">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">Structure</p>
+      <h2>模型结构与计算流程</h2>
+    </div>
+    <span class="stage-badge">{{ gru.model.algorithm }}</span>
+  </div>
+  <div class="model-flow" aria-label="GRU 模型结构流程图">
+    {% for step in gru.model.flow_steps %}
+    <article class="model-flow-node summary-panel">
+      <div class="model-flow-card-head">
+        <strong>步骤 {{ loop.index }}</strong>
+      </div>
+      <p>{{ step }}</p>
+      {% if loop.index == 1 %}
+      <p class="model-flow-explain">
+        训练脚本先按建筑、仪表和时间排序，确保序列窗口只来自同一条连续小时轨迹。
+      </p>
+      {% elif loop.index == 2 %}
+      <p class="model-flow-explain">
+        标准化参数只由训练集估计，之后复用于 valid/test，避免评估集信息泄漏。
+      </p>
+      {% elif loop.index == 3 %}
+      <p class="model-flow-explain">
+        若连续片段长度不足 168 小时，或片段中出现非 1 小时间隔，该位置不会生成训练窗口。
+      </p>
+      {% elif loop.index == 4 %}
+      <p class="model-flow-explain">
+        <code>nn.GRU</code> 输出最后一层隐状态，隐状态可以视为前 168 小时历史的压缩表示。
+      </p>
+      {% elif loop.index == 5 %}
+      <p class="model-flow-explain">
+        线性层只输出一个连续值，对应下一小时变换后目标尺度的读数。
+      </p>
+      {% elif loop.index == 6 %}
+      <p class="model-flow-explain">
+        auto-rolling 更接近真实多步预测：后续窗口会看到模型自己的历史预测，而不总是真实历史读数。
+      </p>
+      {% endif %}
+    </article>
+    {% endfor %}
+  </div>
+
+  <div class="stage-split-grid stage-subsection">
+    <article class="summary-panel">
+      <h4>GRU 输出</h4>
+      <p>
+        每个窗口输入前 168 小时，GRU 将最后时刻隐状态送入线性层，得到下一小时
+        <code>{{ gru.model.prediction_scale }}</code>。
+      </p>
+      <div class="math-card">
+        <math display="block">
+          <msub><mover><mi>y</mi><mo>^</mo></mover><mrow><mi>t</mi></mrow></msub>
+          <mo>=</mo>
+          <mi>Linear</mi>
+          <mo stretchy="false">(</mo>
+          <msub><mi>h</mi><mrow><mi>t</mi><mo>-</mo><mn>1</mn></mrow></msub>
+          <mo stretchy="false">)</mo>
+        </math>
+      </div>
+      <p class="muted-copy">{{ gru.model.prediction_note }}</p>
+    </article>
+    <article class="summary-panel">
+      <h4>Auto-Rolling 规则</h4>
+      <dl class="metric-dl">
+        <div>
+          <dt>分组键</dt>
+          <dd>{{ " + ".join(gru.rolling_evaluation.key_fields) }}</dd>
+        </div>
+        <div>
+          <dt>跳过规则</dt>
+          <dd>历史不足或时间不连续</dd>
+        </div>
+        <div>
+          <dt>反馈方式</dt>
+          <dd>预测值回填</dd>
+        </div>
+      </dl>
+    </article>
+  </div>
+</section>
+
+<section class="content-band">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">Parameters</p>
+      <h2>关键训练参数</h2>
+    </div>
+    <span class="stage-badge">PyTorch {{ gru.model.torch_version }} / {{ gru.model.device }}</span>
+  </div>
+  <div class="table-wrap parameter-table">
+    <table>
+      <thead>
+        <tr>
+          <th>参数</th>
+          <th>取值</th>
+          <th>说明</th>
+          <th>参数</th>
+          <th>取值</th>
+          <th>说明</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for pair in gru.model.parameter_cards|batch(2, none) %}
+        <tr>
+          {% for param in pair %}
+            {% if param %}
+            <td><code>{{ param.name }}</code></td>
+            <td><strong>{{ param.value }}</strong></td>
+            <td>{{ param.description }}</td>
+            {% else %}
+            <td></td>
+            <td></td>
+            <td></td>
+            {% endif %}
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="content-band">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">Training</p>
+      <h2>训练过程摘要</h2>
+    </div>
+    <span class="stage-badge">best epoch {{ gru.training.best_epoch }}</span>
+  </div>
+  <p class="muted-copy">{{ gru.training.note }}</p>
+  <div class="gru-history-list">
+    {% for item in gru.training.history %}
+    <div class="gru-history-row{% if item.epoch == gru.training.best_epoch %} best{% endif %}">
+      <span>Epoch {{ item.epoch }}</span>
+      <div class="importance-track">
+        <span style="width: {{ item.rmse_width_percent }}%"></span>
+      </div>
+      <strong>RMSE {{ "%.6f"|format(item.validation_rmse) }}</strong>
+      <small>loss {{ "%.6f"|format(item.train_loss) }} / R2 {{ "%.4f"|format(item.validation_r2) }}</small>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="content-band">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">Metrics</p>
+      <h2>输出与测评得分</h2>
+    </div>
+    <span class="stage-badge">auto-rolling valid / test</span>
+  </div>
+  <p class="important-text">{{ gru.metrics.scale_note }}</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>集合</th>
+          <th>MSE</th>
+          <th>MAE</th>
+          <th>RMSE</th>
+          <th>R2</th>
+          <th>SMAPE</th>
+          <th>评估行数</th>
+          <th>跳过行数</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>validation</code></td>
+          <td>{{ "%.6f"|format(gru.metrics.validation.mse) }}</td>
+          <td>{{ "%.6f"|format(gru.metrics.validation.mae) }}</td>
+          <td>{{ "%.6f"|format(gru.metrics.validation.rmse) }}</td>
+          <td>{{ "%.6f"|format(gru.metrics.validation.r2) }}</td>
+          <td>{{ "%.4f"|format(gru.metrics.validation.smape) }}</td>
+          <td>{{ "{:,}".format(gru.metrics.validation.evaluated_row_count) }}</td>
+          <td>{{ "{:,}".format(gru.metrics.validation.skipped_row_count) }}</td>
+        </tr>
+        <tr>
+          <td><code>test</code></td>
+          <td>{{ "%.6f"|format(gru.metrics.test.mse) }}</td>
+          <td>{{ "%.6f"|format(gru.metrics.test.mae) }}</td>
+          <td>{{ "%.6f"|format(gru.metrics.test.rmse) }}</td>
+          <td>{{ "%.6f"|format(gru.metrics.test.r2) }}</td>
+          <td>{{ "%.4f"|format(gru.metrics.test.smape) }}</td>
+          <td>{{ "{:,}".format(gru.metrics.test.evaluated_row_count) }}</td>
+          <td>{{ "{:,}".format(gru.metrics.test.skipped_row_count) }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

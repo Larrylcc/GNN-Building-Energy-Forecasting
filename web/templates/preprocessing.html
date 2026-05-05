@@ -1,0 +1,411 @@
+{% extends "base.html" %}
+
+{% block title %}数据预处理 - ASHRAE 建筑能耗预测{% endblock %}
+
+{% block content %}
+<section class="page-hero">
+  <div>
+    <p class="eyebrow">Preprocessing Pipeline</p>
+    <h1>数据预处理流程</h1>
+    <p class="hero-copy">
+      本页按实际数据处理逻辑还原预处理过程：拼接建筑和天气信息、缺失值标记与填充、任务筛选和异常建筑剔除、目标变换与时间切分。
+      运行时只读取 <code>web/data/preprocessing_overview.json</code>。
+    </p>
+  </div>
+</section>
+
+<section class="stat-grid" aria-label="预处理核心统计">
+  <article class="stat-card">
+    <span>原始训练记录</span>
+    <strong>{{ "{:,}".format(preprocessing.headline_stats.raw_train_rows) }}</strong>
+    <small>train.csv 小时级读数</small>
+  </article>
+  <article class="stat-card">
+    <span>筛选后记录</span>
+    <strong>{{ "{:,}".format(preprocessing.headline_stats.screened_rows) }}</strong>
+    <small>保留电表并剔除异常建筑</small>
+  </article>
+  <article class="stat-card">
+    <span>最终列数</span>
+    <strong>{{ preprocessing.headline_stats.final_column_count }}</strong>
+    <small>包含特征、时间戳和目标列</small>
+  </article>
+  <article class="stat-card">
+    <span>时间切分比例</span>
+    <strong>{{ preprocessing.headline_stats.split_ratio }}</strong>
+    <small>train / valid / test</small>
+  </article>
+</section>
+
+<section class="content-band process-band">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">Step 1</p>
+      <h2>1. 拼接建筑和天气信息</h2>
+    </div>
+    <span class="stage-badge">合并 + 基础特征</span>
+  </div>
+  <p>先为训练主表补充建筑静态属性，再补充对应站点和小时的天气观测。</p>
+  <div class="formula-list">
+    {% for formula in preprocessing.merge_and_features.join_formulas %}
+    <code>{{ formula }}</code>
+    {% endfor %}
+  </div>
+
+  <div class="stage-subsection">
+    <h4>生成基础特征</h4>
+    <div class="formula-grid">
+      {% for item in preprocessing.merge_and_features.engineered_features %}
+      <div class="formula-card">
+        <strong>{{ item.feature }}（{{ item.name_zh }}）</strong>
+        <code>{{ item.formula }}</code>
+        <p class="formula-desc">{{ item.description }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="stage-split-grid stage-subsection">
+    <article class="summary-panel">
+      <h4>风向编码互动图</h4>
+      <p>点击或悬停任意编码，查看角度范围。</p>
+      {% set first_wind = preprocessing.merge_and_features.wind_direction_bins[0] %}
+      <div class="wind-compass" aria-label="风向编码互动图">
+        <div class="wind-compass-board">
+          {% for item in preprocessing.merge_and_features.wind_direction_bins %}
+          <button
+            class="wind-sector{% if loop.first %} active{% endif %}"
+            type="button"
+            style="--x: {{ item.x_percent }}%; --y: {{ item.y_percent }}%;"
+            data-code="{{ item.code }}"
+            data-label="{{ item.label }}"
+            data-formula="{{ item.formula }}"
+            title="{{ item.label }}: {{ item.formula }}"
+          >
+            {{ item.code }}
+          </button>
+          {% endfor %}
+        </div>
+        <div class="wind-detail" data-wind-detail>
+          <strong>编码 {{ first_wind.code }} · {{ first_wind.label }}</strong>
+          <span>{{ first_wind.formula }}</span>
+          <span>计算式：int(wind_direction / 22.5) % 16</span>
+        </div>
+      </div>
+    </article>
+    <article class="summary-panel">
+      <h4>蒲福风级区间</h4>
+      <p><code>{{ preprocessing.merge_and_features.beaufort_scale_formula }}</code></p>
+      <div class="mini-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>编码</th>
+              <th>风速区间</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in preprocessing.merge_and_features.beaufort_scale_bins %}
+            <tr>
+              <td>{{ item.code }}</td>
+              <td><code>{{ item.range }}</code></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </article>
+  </div>
+
+  <div class="stage-subsection">
+    <h4>模型输入特征分组</h4>
+    <div class="field-grid">
+      <article class="field-panel">
+        <h3>分类特征</h3>
+        <div class="chip-list">
+          {% for feature in preprocessing.feature_engineering.categorical_features %}
+          <code class="code-chip">{{ feature.label }}</code>
+          {% endfor %}
+        </div>
+      </article>
+      <article class="field-panel">
+        <h3>数值特征</h3>
+        <div class="chip-list">
+          {% for feature in preprocessing.feature_engineering.numerical_features %}
+          <code class="code-chip">{{ feature.label }}</code>
+          {% endfor %}
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="content-band process-band">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">Step 2</p>
+      <h2>2. 缺失值标记与填充</h2>
+    </div>
+    <span class="stage-badge">保留 NaN + 标记</span>
+  </div>
+  <p>{{ preprocessing.missing_value_handling.strategy }}</p>
+  <div class="formula-list">
+    <code>{{ preprocessing.missing_value_handling.formula }}</code>
+  </div>
+  <p class="important-text">{{ preprocessing.missing_value_handling.fill_strategy }}</p>
+  <p>
+    <code>timestamp</code> 和 <code>meter_reading</code> 被排除在缺失指示列生成之外。
+    最终数据包含 {{ preprocessing.headline_stats.missing_indicator_count }} 个缺失指示列。
+  </p>
+  <div class="chip-list">
+    {% for column in preprocessing.missing_value_handling.missing_indicator_columns %}
+    <code class="code-chip">{{ column }}</code>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="content-band process-band">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">Step 3</p>
+      <h2>3. 任务筛选和异常建筑剔除</h2>
+    </div>
+    <span class="stage-badge">电表任务 + 异常剔除</span>
+  </div>
+  <p>{{ preprocessing.screening.outlier_reason }}</p>
+  <div class="formula-list">
+    <code>{{ preprocessing.screening.filter_formula }}</code>
+  </div>
+  <div class="stage-split-grid stage-subsection">
+    <article class="summary-panel">
+      <h4>数据量变化</h4>
+      <div
+        class="bar-chart"
+        data-chart="row-flow"
+        data-values='{{ preprocessing.row_flow | tojson }}'
+        aria-label="预处理行数变化"
+      ></div>
+    </article>
+    <article class="summary-panel">
+      <h4>剔除建筑 ID</h4>
+      <p>
+        从 <code>{{ preprocessing.screening.input_file }}</code> 到
+        <code>{{ preprocessing.screening.output_file }}</code>，
+        保留 {{ preprocessing.screening.kept_percent }}%。
+      </p>
+      <div class="chip-list">
+        {% for building_id in preprocessing.screening.excluded_building_ids %}
+        <code class="code-chip">{{ building_id }}</code>
+        {% endfor %}
+      </div>
+    </article>
+  </div>
+
+  <div class="stage-subsection">
+    <h4>部分被剔除的高读数样例</h4>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>building_id</th>
+            <th>timestamp</th>
+            <th>原始读数</th>
+            <th>若保留的 log1p</th>
+            <th>若保留的 min-max</th>
+            <th>site_id</th>
+            <th>square_feet</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in preprocessing.screening.removed_high_reading_examples %}
+          <tr>
+            <td>{{ row.building_id }}</td>
+            <td>{{ row.timestamp }}</td>
+            <td>{{ row.meter_reading_raw }}</td>
+            <td>{{ row.log1p_if_kept }}</td>
+            <td>{{ row.minmax_if_kept }}</td>
+            <td>{{ row.site_id }}</td>
+            <td>{{ "{:,}".format(row.square_feet) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="content-band process-band">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">Step 4</p>
+      <h2>4. 目标变换与时间切分</h2>
+    </div>
+    <span class="stage-badge">log1p + train min-max</span>
+  </div>
+  <p>{{ preprocessing.target_transform.description }}</p>
+  <div class="math-formula-grid" aria-label="目标变换公式">
+    <div class="math-card">
+      <math display="block">
+        <msub><mi>y</mi><mrow><mi>log</mi></mrow></msub>
+        <mo>=</mo>
+        <mi>ln</mi>
+        <mo stretchy="false">(</mo>
+        <mn>1</mn>
+        <mo>+</mo>
+        <mi>y</mi>
+        <mo stretchy="false">)</mo>
+      </math>
+    </div>
+    <div class="math-card">
+      <math display="block">
+        <msub><mi>y</mi><mrow><mi>scaled</mi></mrow></msub>
+        <mo>=</mo>
+        <mfrac>
+          <mrow>
+            <msub><mi>y</mi><mrow><mi>log</mi></mrow></msub>
+            <mo>-</mo>
+            <msub><mi>min</mi><mrow><mi>train_log</mi></mrow></msub>
+          </mrow>
+          <mrow>
+            <msub><mi>max</mi><mrow><mi>train_log</mi></mrow></msub>
+            <mo>-</mo>
+            <msub><mi>min</mi><mrow><mi>train_log</mi></mrow></msub>
+          </mrow>
+        </mfrac>
+      </math>
+    </div>
+  </div>
+  <div class="parameter-notes">
+    <p>
+      <code>min_train_log</code> = <strong>{{ preprocessing.target_transform.target_log1p_min }}</strong>：
+      {{ preprocessing.target_transform.parameter_notes.target_log1p_min }}
+    </p>
+    <p>
+      <code>max_train_log</code> = <strong>{{ preprocessing.target_transform.target_log1p_max }}</strong>：
+      {{ preprocessing.target_transform.parameter_notes.target_log1p_max }}
+    </p>
+  </div>
+  <div class="stage-split-grid stage-subsection">
+    <article>
+      <h4>代表性目标值变化</h4>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>原始 meter_reading</th>
+              <th>log1p</th>
+              <th>min-max</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in preprocessing.target_transform.example_transformations %}
+            <tr>
+              <td>{{ row.raw_meter_reading }}</td>
+              <td>{{ row.log1p }}</td>
+              <td>{{ row.minmax }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </article>
+    <article>
+      <h4>时间切分</h4>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>集合</th>
+              <th>行数</th>
+              <th>开始时间</th>
+              <th>结束时间</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for file in preprocessing.split_summary.files %}
+            <tr>
+              <td><code>{{ file.split }}</code></td>
+              <td>{{ "{:,}".format(file.row_count) }}</td>
+              <td>{{ file.start_timestamp }}</td>
+              <td>{{ file.end_timestamp }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </article>
+  </div>
+</section>
+
+<section class="content-band">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">Outputs</p>
+      <h2>最终数据文件与样例</h2>
+    </div>
+  </div>
+  <div class="table-wrap split-file-table">
+    <table>
+      <thead>
+        <tr>
+          <th>文件</th>
+          <th>集合</th>
+          <th>行数</th>
+          <th>列数</th>
+          <th>大小 MB</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for file in preprocessing.split_summary.files %}
+        <tr>
+          <td><code>{{ file.filename }}</code></td>
+          <td>{{ file.split }}</td>
+          <td>{{ "{:,}".format(file.row_count) }}</td>
+          <td>{{ file.column_count }}</td>
+          <td>{{ file.size_mb }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sample-tabs split-tabs" role="tablist" aria-label="最终预处理数据样例切换">
+    <button class="tab-button active" type="button" data-sample-target="pre-train">train</button>
+    <button class="tab-button" type="button" data-sample-target="pre-valid">valid</button>
+    <button class="tab-button" type="button" data-sample-target="pre-test">test</button>
+  </div>
+
+  {% for file in preprocessing.split_summary.files %}
+  <div class="sample-panel{% if loop.first %} active{% endif %}" id="sample-pre-{{ file.split }}">
+    {{ table_from_rows(file.sample_rows) }}
+  </div>
+  {% endfor %}
+</section>
+{% endblock %}
+
+{% macro table_from_rows(rows) %}
+<div class="table-wrap sample-table">
+  <table>
+    <thead>
+      <tr>
+        {% for column in rows[0].keys() %}
+        <th>{{ column }}</th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        {% for value in row.values() %}
+        <td>{{ value if value is not none else "缺失" }}</td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endmacro %}
+
+{% block scripts %}
+<script src="{{ url_for('static', path='/js/dataset.js') }}"></script>
+{% endblock %}

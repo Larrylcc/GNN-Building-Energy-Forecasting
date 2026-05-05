@@ -1,0 +1,363 @@
+{% extends "base.html" %}
+
+{% block title %}XGBoost - ASHRAE 建筑能耗预测{% endblock %}
+
+{% block content %}
+<section class="page-hero slim">
+  <div>
+    <p class="eyebrow">Model Baseline</p>
+    <h1>XGBoost</h1>
+    <p class="hero-copy">
+      本页展示 XGBoost baseline 的数据输入组织、模型内部训练逻辑、输出尺度和测试结果。
+      {{ xgboost.runtime_policy }}
+    </p>
+  </div>
+</section>
+
+<section class="stat-grid" aria-label="XGBoost 核心统计">
+  <article class="stat-card">
+    <span>输入特征数</span>
+    <strong>{{ xgboost.headline_stats.feature_count }}</strong>
+    <small>去除 timestamp 与目标列</small>
+  </article>
+  <article class="stat-card">
+    <span>训练记录</span>
+    <strong>{{ "{:,}".format(xgboost.headline_stats.train_rows) }}</strong>
+    <small>log1p_minmax_train.csv</small>
+  </article>
+  <article class="stat-card">
+    <span>最佳迭代轮数</span>
+    <strong>{{ xgboost.headline_stats.best_iteration_round_count }}</strong>
+    <small>early stopping 后使用</small>
+  </article>
+  <article class="stat-card">
+    <span>Test RMSE</span>
+    <strong>{{ "%.6f"|format(xgboost.headline_stats.test_rmse) }}</strong>
+    <small>变换后目标尺度</small>
+  </article>
+</section>
+
+<section class="content-band">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">Input</p>
+      <h2>数据如何组织后输入模型</h2>
+    </div>
+    <span class="stage-badge">{{ xgboost.data_input.target_scale }}</span>
+  </div>
+  <p class="muted-copy">
+    <code>timestamp</code> 只用于时间切分，不进入模型；<code>meter_reading</code> 是监督学习目标列。
+    训练脚本使用 <code>{{ xgboost.data_input.feature_expression }}</code> 得到特征矩阵。
+  </p>
+
+  <div class="stage-split-grid">
+    <article class="summary-panel">
+      <h4>输入文件与行数</h4>
+      <div class="table-wrap compact-table">
+        <table>
+          <thead>
+            <tr>
+              <th>集合</th>
+              <th>文件</th>
+              <th>行数</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for file in xgboost.data_input.split_files %}
+            <tr>
+              <td><code>{{ file.split }}</code></td>
+              <td><code>{{ file.filename }}</code></td>
+              <td>{{ "{:,}".format(file.row_count) }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </article>
+    <article class="summary-panel">
+      <h4>时间切分</h4>
+      <div class="table-wrap compact-table">
+        <table>
+          <thead>
+            <tr>
+              <th>集合</th>
+              <th>开始时间</th>
+              <th>结束时间</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for split in xgboost.data_input.time_splits %}
+            <tr>
+              <td><code>{{ split.split }}</code></td>
+              <td>{{ split.start_timestamp }}</td>
+              <td>{{ split.end_timestamp }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </article>
+  </div>
+
+  <div class="stage-subsection">
+    <h4>模型输入特征分组</h4>
+    <div class="field-grid xgb-feature-grid">
+      {% for group in xgboost.data_input.feature_groups %}
+      <article class="field-panel">
+        <h3>{{ group.name }} <span class="feature-count">{{ group.count }}</span></h3>
+        <p>{{ group.description }}</p>
+        <div class="chip-list">
+          {% if group.count %}
+            {% for feature in group.features %}
+            <code class="code-chip">{{ feature.label }}</code>
+            {% endfor %}
+          {% else %}
+            <span class="empty-chip">无</span>
+          {% endif %}
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="content-band">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">Structure</p>
+      <h2>模型结构与计算流程</h2>
+    </div>
+    <span class="stage-badge">{{ xgboost.model.algorithm }}</span>
+  </div>
+  <div class="model-flow" aria-label="XGBoost 模型结构流程图">
+    {% for step in xgboost.model.flow_steps %}
+    <article class="model-flow-node summary-panel">
+      <div class="model-flow-card-head">
+        <strong>步骤 {{ loop.index }}</strong>
+      </div>
+      <p>{{ step }}</p>
+      {% if loop.index == 1 %}
+      <p class="model-flow-explain">
+        三个文件已经在预处理阶段完成异常筛选、目标变换和时间顺序切分，训练时直接按 train / valid / test 三个集合读取。
+      </p>
+      {% elif loop.index == 2 %}
+      <p class="model-flow-explain">
+        <code>timestamp</code> 用于切分和排序，<code>meter_reading</code> 是监督学习标签；剩余 34 列组成每条样本的特征向量。
+      </p>
+      {% elif loop.index == 3 %}
+      <p class="model-flow-explain">
+        <code>QuantileDMatrix</code> 是 XGBoost 面向直方图训练的高效数据容器，会把连续特征按分位数近似压缩成分箱表示，从而降低内存占用并加快分裂点搜索。
+      </p>
+      {% elif loop.index == 4 %}
+      <p class="model-flow-explain">
+        回归树是一组“特征条件判断”的树结构，每个叶子节点输出一个连续数值；XGBoost 每一轮新增一棵树，学习当前预测误差的梯度方向。
+      </p>
+      {% elif loop.index == 5 %}
+      <p class="model-flow-explain">
+        最终预测不是单棵树给出，而是多棵回归树的输出累加，再得到变换后目标尺度上的 <code>y_scaled</code>。
+      </p>
+      {% elif loop.index == 6 %}
+      <p class="model-flow-explain">
+        valid 用于训练过程中的早停和模型选择，test 用于最终泛化效果评估；两者都在同一变换后目标尺度上计算指标。
+      </p>
+      {% endif %}
+    </article>
+    {% endfor %}
+  </div>
+
+  <div class="stage-split-grid stage-subsection">
+    <article class="summary-panel">
+      <h4>树集成输出</h4>
+      <p>
+        XGBoost 每轮新增一棵回归树来修正当前预测误差，最终预测值为多棵树输出的加和。
+        输出列记为 <code>{{ xgboost.model.prediction_scale }}</code>，不是原始能耗读数。
+      </p>
+      <div class="math-card">
+        <math display="block">
+          <msub><mover><mi>y</mi><mo>^</mo></mover><mrow><mi>scaled</mi></mrow></msub>
+          <mo>=</mo>
+          <munderover><mo>&#8721;</mo><mrow><mi>t</mi><mo>=</mo><mn>1</mn></mrow><mi>T</mi></munderover>
+          <msub><mi>f</mi><mi>t</mi></msub>
+          <mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo>
+        </math>
+      </div>
+      <p class="muted-copy">{{ xgboost.model.prediction_note }}</p>
+    </article>
+    <article class="summary-panel">
+      <h4>训练轮数控制</h4>
+      <dl class="metric-dl">
+        <div>
+          <dt>训练上限</dt>
+          <dd>{{ xgboost.model.training_rounds.num_boost_round_upper_bound }}</dd>
+        </div>
+        <div>
+          <dt>早停轮数</dt>
+          <dd>{{ xgboost.model.training_rounds.early_stopping_rounds }}</dd>
+        </div>
+        <div>
+          <dt>最佳迭代轮数</dt>
+          <dd>{{ xgboost.model.training_rounds.best_iteration_round_count }}</dd>
+        </div>
+      </dl>
+    </article>
+  </div>
+</section>
+
+<section class="content-band">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">Parameters</p>
+      <h2>关键训练参数</h2>
+    </div>
+    <span class="stage-badge">XGBoost {{ xgboost.model.xgboost_version }}</span>
+  </div>
+  <div class="table-wrap parameter-table">
+    <table>
+      <thead>
+        <tr>
+          <th>参数</th>
+          <th>取值</th>
+          <th>说明</th>
+          <th>参数</th>
+          <th>取值</th>
+          <th>说明</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for pair in xgboost.model.parameter_cards|batch(2, none) %}
+        <tr>
+          {% for param in pair %}
+            {% if param %}
+            <td><code>{{ param.name }}</code></td>
+            <td><strong>{{ param.value }}</strong></td>
+            <td>{{ param.description }}</td>
+            {% else %}
+            <td></td>
+            <td></td>
+            <td></td>
+            {% endif %}
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="content-band">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">Metrics</p>
+      <h2>输出与测评得分</h2>
+    </div>
+    <span class="stage-badge">valid / test</span>
+  </div>
+  <p class="important-text">{{ xgboost.metrics.scale_note }}</p>
+
+  <div class="math-formula-grid xgb-formula-grid" aria-label="模型评分公式">
+    <div class="math-card metric-formula-card">
+      <h4>MSE</h4>
+      <math display="block">
+        <mi>MSE</mi><mo>=</mo><mfrac><mn>1</mn><mi>n</mi></mfrac>
+        <munderover><mo>&#8721;</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover>
+        <msup><mrow><mo stretchy="false">(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>-</mo><msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub><mo stretchy="false">)</mo></mrow><mn>2</mn></msup>
+      </math>
+      <p>误差平方的平均值。</p>
+    </div>
+    <div class="math-card metric-formula-card">
+      <h4>RMSE</h4>
+      <math display="block">
+        <mi>RMSE</mi><mo>=</mo><msqrt><mi>MSE</mi></msqrt>
+      </math>
+      <p>MSE 开平方，与目标值处于同一尺度。</p>
+    </div>
+    <div class="math-card metric-formula-card">
+      <h4>MAE</h4>
+      <math display="block">
+        <mi>MAE</mi><mo>=</mo><mfrac><mn>1</mn><mi>n</mi></mfrac>
+        <munderover><mo>&#8721;</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover>
+        <mrow><mo>|</mo><msub><mi>y</mi><mi>i</mi></msub><mo>-</mo><msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub><mo>|</mo></mrow>
+      </math>
+      <p>绝对误差的平均值。</p>
+    </div>
+    <div class="math-card metric-formula-card">
+      <h4>R2</h4>
+      <math display="block">
+        <msup><mi>R</mi><mn>2</mn></msup><mo>=</mo><mn>1</mn><mo>-</mo>
+        <mfrac>
+          <mrow><munderover><mo>&#8721;</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover><msup><mrow><mo stretchy="false">(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>-</mo><msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub><mo stretchy="false">)</mo></mrow><mn>2</mn></msup></mrow>
+          <mrow><munderover><mo>&#8721;</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover><msup><mrow><mo stretchy="false">(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>-</mo><mover><mi>y</mi><mo>_</mo></mover><mo stretchy="false">)</mo></mrow><mn>2</mn></msup></mrow>
+        </mfrac>
+      </math>
+      <p>相对均值基线解释目标方差的比例。</p>
+    </div>
+    <div class="math-card metric-formula-card">
+      <h4>SMAPE</h4>
+      <math display="block">
+        <mi>SMAPE</mi><mo>=</mo><mfrac><mn>100</mn><mi>n</mi></mfrac>
+        <munderover><mo>&#8721;</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover>
+        <mfrac>
+          <mrow><mn>2</mn><mo>|</mo><msub><mi>y</mi><mi>i</mi></msub><mo>-</mo><msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub><mo>|</mo></mrow>
+          <mrow><mo>|</mo><msub><mi>y</mi><mi>i</mi></msub><mo>|</mo><mo>+</mo><mo>|</mo><msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub><mo>|</mo></mrow>
+        </mfrac>
+      </math>
+      <p>对称平均绝对百分比误差。</p>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>集合</th>
+          <th>MSE</th>
+          <th>MAE</th>
+          <th>RMSE</th>
+          <th>R2</th>
+          <th>SMAPE</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>validation</code></td>
+          <td>{{ "%.6f"|format(xgboost.metrics.validation.mse) }}</td>
+          <td>{{ "%.6f"|format(xgboost.metrics.validation.mae) }}</td>
+          <td>{{ "%.6f"|format(xgboost.metrics.validation.rmse) }}</td>
+          <td>{{ "%.6f"|format(xgboost.metrics.validation.r2) }}</td>
+          <td>{{ "%.4f"|format(xgboost.metrics.validation.smape) }}</td>
+        </tr>
+        <tr>
+          <td><code>test</code></td>
+          <td>{{ "%.6f"|format(xgboost.metrics.test.mse) }}</td>
+          <td>{{ "%.6f"|format(xgboost.metrics.test.mae) }}</td>
+          <td>{{ "%.6f"|format(xgboost.metrics.test.rmse) }}</td>
+          <td>{{ "%.6f"|format(xgboost.metrics.test.r2) }}</td>
+          <td>{{ "%.4f"|format(xgboost.metrics.test.smape) }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="content-band">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">Gain</p>
+      <h2>特征重要性摘要</h2>
+    </div>
+    <span class="stage-badge">{{ xgboost.feature_importance.importance_type }}</span>
+  </div>
+  <p class="muted-copy">{{ xgboost.feature_importance.note }}</p>
+  <div class="importance-list">
+    {% for item in xgboost.feature_importance.top_features %}
+    <div class="importance-row">
+      <span class="importance-label">{{ item.label }}</span>
+      <div class="importance-track">
+        <span style="width: {{ item.width_percent }}%"></span>
+      </div>
+      <strong>{{ "%.3f"|format(item.importance) }}</strong>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}
