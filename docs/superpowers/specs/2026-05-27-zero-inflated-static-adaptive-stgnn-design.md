@@ -128,6 +128,8 @@ thresholded_prediction = 0 if p_zero >= 0.5 else prediction
 
 The primary regression metrics continue to use the soft prediction. Thresholded metrics are comparison artifacts for deciding whether hard zeroing should become the main output later.
 
+All metrics in this iteration are computed on the preprocessed `log1p_minmax` target scale. Do not add raw inverse-normalized metric code or expand `*_raw_test_metrics.py` scripts for the zero-inflated model.
+
 ## Rolling Evaluation
 
 Use soft prediction for main metrics.
@@ -163,6 +165,8 @@ Planned implementation scope:
 Do not change preprocessing data in this iteration.
 
 Do not modify the currently running cloud output artifacts.
+
+Do not add raw inverse-normalized evaluation scripts in this iteration.
 
 ## Verification
 
