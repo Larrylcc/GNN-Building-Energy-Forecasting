@@ -1,12 +1,38 @@
 # OS files
 .DS_Store
+Thumbs.db
 
 # Python cache
 __pycache__/
+*.pyc
 
-# data
-preprocessed_data/*
-
-# ide cache
+# IDE
 .idea/
 .vscode/
+
+# Preprocessed data (too large for GitHub)
+preprocessed_data/
+
+# Model weights and binary artifacts
+*.pt
+*.npy
+**/xgboost_final_model.json
+
+# Training logs and intermediate outputs
+*_training_history.csv
+*_time_series_split.csv
+*_topk_edges.csv
+*_feature_importance.csv
+
+# Web server logs
+web/uvicorn.err.log
+web/uvicorn.out.log
+
+# Git worktrees
+.worktrees/
+
+# AI assistant config
+AGENTS.md
+
+# Notebooks (reference only, not project code)
+*.ipynb
