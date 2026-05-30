@@ -1,0 +1,90 @@
+{
+  "model_name": "Ridge Regression",
+  "meter_id": 0,
+  "meter_name": "electricity",
+  "data_root": "F:\\Desktop\\Final\\USTB-graduation-project\\ASHRAE-Great Energy Predictor III\\ashrae-energy-prediction",
+  "train_data_path": "F:\\Desktop\\Final\\workspace\\preprocessed_data\\log1p_minmax_train.csv",
+  "valid_data_path": "F:\\Desktop\\Final\\workspace\\preprocessed_data\\log1p_minmax_valid.csv",
+  "test_data_path": "F:\\Desktop\\Final\\workspace\\preprocessed_data\\log1p_minmax_test.csv",
+  "preprocessing_summary_path": "F:\\Desktop\\Final\\workspace\\preprocessed_data\\log1p_minmax_summary.json",
+  "output_dir": "F:\\Desktop\\Final\\workspace\\Ridge Regression\\ridge_regression_outputs\\meter_0",
+  "preprocessed_data_dir": "F:\\Desktop\\Final\\workspace\\preprocessed_data",
+  "target_preprocess": "log1p_then_train_minmax",
+  "target_log1p_min": 0.0,
+  "target_log1p_max": 8.991312980651855,
+  "train_ratio": 0.8,
+  "valid_ratio": 0.1,
+  "test_ratio": 0.1,
+  "feature_count": 34,
+  "train_row_count": 9534062,
+  "valid_row_count": 1208473,
+  "test_row_count": 1196500,
+  "splits": [
+    {
+      "split": "train",
+      "start_timestamp": "2016-01-01 00:00:00",
+      "end_timestamp": "2016-10-19 18:00:00",
+      "row_count": 9534062
+    },
+    {
+      "split": "valid",
+      "start_timestamp": "2016-10-19 19:00:00",
+      "end_timestamp": "2016-11-25 09:00:00",
+      "row_count": 1208473
+    },
+    {
+      "split": "test",
+      "start_timestamp": "2016-11-25 10:00:00",
+      "end_timestamp": "2016-12-31 23:00:00",
+      "row_count": 1196500
+    }
+  ],
+  "validation_normalized_metrics": {
+    "mse": 0.021372407882692974,
+    "mae": 0.11013284511168588,
+    "r2": 0.2666816088428332,
+    "smape": 27.904003148645778,
+    "rmse": 0.14619305004921737,
+    "rmsle": 0.1062026414006054
+  },
+  "test_normalized_metrics": {
+    "mse": 0.025252446428872474,
+    "mae": 0.12238112300867274,
+    "r2": 0.11776385949456569,
+    "smape": 30.086607486864363,
+    "rmse": 0.15891018352790506,
+    "rmsle": 0.11463128853710323
+  },
+  "validation_raw_metrics": {
+    "mse": 357450.86339360964,
+    "mae": 160.75260936879482,
+    "r2": -3.645003464353345,
+    "smape": 81.4576934270008,
+    "rmse": 597.8719456485725,
+    "rmsle": 1.314467467331013
+  },
+  "test_raw_metrics": {
+    "mse": 420556.64017816127,
+    "mae": 184.22550277046057,
+    "r2": -4.563109723530193,
+    "smape": 88.52320890864188,
+    "rmse": 648.503384862532,
+    "rmsle": 1.4288111936981784
+  },
+  "validation_mse": 0.021372407882692974,
+  "validation_mae": 0.11013284511168588,
+  "validation_r2": 0.2666816088428332,
+  "validation_smape": 27.904003148645778,
+  "validation_rmse": 0.14619305004921737,
+  "validation_rmsle": 0.1062026414006054,
+  "test_mse": 0.025252446428872474,
+  "test_mae": 0.12238112300867274,
+  "test_r2": 0.11776385949456569,
+  "test_smape": 30.086607486864363,
+  "test_rmse": 0.15891018352790506,
+  "test_rmsle": 0.11463128853710323,
+  "model_path": "F:\\Desktop\\Final\\workspace\\Ridge Regression\\ridge_regression_outputs\\meter_0\\ridge_model.pkl",
+  "model_params_path": "F:\\Desktop\\Final\\workspace\\Ridge Regression\\ridge_regression_outputs\\meter_0\\ridge_model_params.json",
+  "validation_metrics_path": "F:\\Desktop\\Final\\workspace\\Ridge Regression\\ridge_regression_outputs\\meter_0\\ridge_validation_metrics.json",
+  "test_metrics_path": "F:\\Desktop\\Final\\workspace\\Ridge Regression\\ridge_regression_outputs\\meter_0\\ridge_test_metrics.json"
+}

@@ -1,0 +1,14 @@
+{
+  "mse": 0.007748032178429995,
+  "mae": 0.05920627764224099,
+  "r2": 0.7294153783853797,
+  "smape": 20.12325393607689,
+  "rmse": 0.08802290712325965,
+  "rmsle": 0.06514604965395596,
+  "evaluated_row_count": 1196021,
+  "skipped_row_count": 479,
+  "window_count": 1196021,
+  "evaluated_timestamp_count": 878,
+  "skipped_timestamp_count": 0,
+  "unknown_node_row_count": 479
+}
